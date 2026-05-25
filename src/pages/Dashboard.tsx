@@ -497,55 +497,100 @@ const [statsCache, setStatsCache] = useState<Record<string, ApiMonitorStats>>({}
         </button>
 
         {/* Expanded Area */}
-        {isExpanded && (
-          <div className="px-4 pb-4 pt-2 bg-black/20 border-t border-[var(--border-subtle)]">
-            {isFetchingStats === monitor.id ? (
-              <div className="text-xs text-sky-400 py-4">Loading stats...</div>
-            ) : stats ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <MetricBox label="Uptime 24h" value={`${stats.uptime_pct_24h.toFixed(2)}%`} />
-                  <MetricBox label="Uptime 7d" value={`${stats.uptime_pct_7d.toFixed(2)}%`} />
-                  <MetricBox label="Avg Latency" value={`${(stats.recent_pings.reduce((a, b) => a + b.LatencyMs, 0) / (stats.recent_pings.length || 1)).toFixed(0)}ms`} />
-                  <MetricBox label="Interval" value={`${stats.check_interval}s`} />
-                </div>
+       {isExpanded && (
+  <div className="px-4 pb-4 pt-2 bg-black/20 border-t border-[var(--border-subtle)] animate-fade-in-up">
+    {isFetchingStats === monitor.id ? (
+      <div className="text-xs text-sky-400 py-4 flex items-center gap-2">
+        <Loader2 className="w-4 h-4 animate-spin" /> Loading updated stats...
+      </div>
+    ) : stats ? (
+      <div className="space-y-4">
 
-                <div className="max-h-40 overflow-y-auto">
-                  <table className="w-full text-xs">
-                    <thead className="text-[var(--text-muted)] uppercase text-[10px]">
-                      <tr>
-                        <th className="text-left py-1">Time</th>
-                        <th className="text-left py-1">Region</th>
-                        <th className="text-left py-1">Node</th>
-                        <th className="text-right py-1">Latency</th>
-                        <th className="text-right py-1">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {stats.recent_pings.map((p) => (
-                        <tr key={p.ID}>
-                          <td className="py-2 text-[var(--text-muted)]">{new Date(p.Timestamp).toLocaleTimeString()}</td>
-                          <td className="py-2 text-sky-400">{p.GeoRegion}</td>
-                          <td className="py-2">{p.RunnerPubkey}</td>
-                          <td className="py-2 text-right">{p.LatencyMs}ms</td>
-                          <td className={`py-2 text-right ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {p.Success ? 'OK' : p.ErrorKind}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+ {/* --- Time-Sensitive 7-Bar Timeline --- */}
+<div className="space-y-1.5 mb-4">
+  <div className="flex justify-between text-[9px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">
+    <span>Live Heartbeat Status</span>
+    <span>Last 7 Intervals</span>
+  </div>
 
-                <Button size="sm" onClick={() => setSelectedMonitorId(monitor.id)}>
-                  <Globe className="w-3 h-3 mr-2" /> Open Geographic Cockpit
-                </Button>
-              </div>
-            ) : (
-              <div className="text-red-400 text-xs py-2">Failed to load statistics.</div>
-            )}
-          </div>
-        )}
+  <div className="flex gap-1 h-6 items-end">
+    {Array.from({ length: 7 }).map((_, i) => {
+      // 1. Calculate the 'Expected' window for this bar
+      const intervalMs = (stats.check_interval || 30) * 1000;
+      const now = Date.now();
+      const windowEnd = now - (i * intervalMs);
+      const windowStart = windowEnd - intervalMs;
+
+      // 2. Check if any ping falls into this specific time window
+      const p = stats.recent_pings.find(ping => {
+        const pingTime = new Date(ping.Timestamp).getTime();
+        return pingTime > windowStart && pingTime <= windowEnd;
+      });
+
+      // 3. Determine color based on time-sensitive presence
+      // - No ping in this window = Grey (Missing/Unknown)
+      // - Ping exists & Success = Green
+      // - Ping exists & Failed = Red
+      const colorClass = !p
+        ? 'bg-zinc-800'           // MISSING: Packet expected but not found
+        : p.Success
+          ? 'bg-emerald-500'      // UP
+          : 'bg-red-500';         // DOWN
+
+      return (
+        <div
+          key={i}
+          className={`flex-1 h-full rounded-[2px] ${colorClass} transition-all duration-300`}
+          title={!p ? `No data for this interval` : `Latency: ${p.LatencyMs}ms`}
+        />
+      );
+    })}
+  </div>
+</div>
+
+        {/* --- Metrics Grid --- */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <MetricBox label="Uptime 24h" value={`${stats.uptime_pct_24h.toFixed(2)}%`} />
+          <MetricBox label="Uptime 7d" value={`${stats.uptime_pct_7d.toFixed(2)}%`} />
+          <MetricBox label="Avg Latency" value={`${(stats.recent_pings.reduce((a, b) => a + b.LatencyMs, 0) / (stats.recent_pings.length || 1)).toFixed(0)}ms`} />
+          <MetricBox label="Interval" value={`${stats.check_interval}s`} />
+        </div>
+
+        {/* --- Log Table --- */}
+        <div className="max-h-40 overflow-y-auto">
+          <table className="w-full text-xs">
+            <thead className="text-[var(--text-muted)] uppercase text-[10px] sticky top-0 bg-black/40 backdrop-blur">
+              <tr>
+                <th className="text-left py-1">Time</th>
+                <th className="text-left py-1">Region</th>
+                <th className="text-right py-1">Latency</th>
+                <th className="text-right py-1">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {stats.recent_pings.map((p) => (
+                <tr key={p.ID} className="hover:bg-white/5">
+                  <td className="py-2 text-[var(--text-muted)] font-mono">{new Date(p.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                  <td className="py-2 text-sky-400">{p.GeoRegion}</td>
+                  <td className="py-2 text-right">{p.LatencyMs}ms</td>
+                  <td className={`py-2 text-right font-semibold ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {p.Success ? 'OK' : 'ERR'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <Button size="sm" onClick={() => setSelectedMonitorId(monitor.id)}>
+          <Globe className="w-3 h-3 mr-2" /> Open Geographic Cockpit
+        </Button>
+      </div>
+    ) : (
+      <div className="text-red-400 text-xs py-2">Failed to load statistics.</div>
+    )}
+  </div>
+)}
       </div>
     );
   })}
