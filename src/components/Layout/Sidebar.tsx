@@ -9,6 +9,7 @@ import {
   Activity,
   Settings,
   HelpCircle,
+  Send,
 } from 'lucide-react';
 
 interface NavItem {
@@ -22,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Dashboard' },
   { to: '/monitor', icon: <Target className="w-4 h-4" />, label: 'Monitor Config' },
   { to: '/miner', icon: <Cpu className="w-4 h-4" />, label: 'Miner Node', badge: 'LIVE' },
+  { to: '/telegram', icon: <Send className="w-4 h-4" />, label: 'Telegram', badge: 'LIVE' },
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [

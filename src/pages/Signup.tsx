@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, Mail, Lock, User, Wallet, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../api/auth-api';
 import { Button } from '../components/Common/Button';
 import { Card } from '../components/Common/Card';
 
@@ -43,7 +43,7 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 export default function Signup() {
-  const { signup } = useAuth();
+  const { doRegister } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ email: '', username: '', password: '', confirm: '', publicKey: '' });
@@ -55,26 +55,33 @@ export default function Signup() {
     return (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [field]: e.target.value }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
 
     if (!form.email.trim()) { setError('Email is required.'); return; }
-    if (!form.username.trim()) { setError('Username is required.'); return; }
     if (form.password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (form.password !== form.confirm) { setError('Passwords do not match.'); return; }
 
     setLoading(true);
-    const result = await signup(form.email, form.username, form.password, form.publicKey || undefined);
-    setLoading(false);
 
-    if (result.success) {
+    try {
+      // 3. Map your form state to the RegisterPayload interface
+      // Note: your API client didn't have 'username' in RegisterPayload,
+      // add it to the interface in lib/auth-api.ts if needed.
+      await doRegister({
+        email: form.email,
+        password: form.password,
+        wallet_pubkey: form.publicKey
+      });
+
       navigate('/dashboard');
-    } else {
-      setError(result.error || 'Registration failed.');
+    } catch (e) {
+      setError((e as Error).message || 'Registration failed.');
+    } finally {
+      setLoading(false);
     }
   }
-
   return (
     <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md animate-fade-in-up">

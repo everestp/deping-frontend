@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
 import { SolanaWalletProvider } from './context/SolanaWallet';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { PublicShell } from './components/Layout/PublicShell';
 import { AppShell } from './components/Layout/AppShell';
 
@@ -13,11 +13,13 @@ import MonitorConfig from './pages/MonitorConfig';
 import MinerNode from './pages/MinerNode';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
+import TelegramPage from './pages/TeleGramPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  // FIXED: Accessing 'loading' and 'loggedIn' from the auth-api hook
+  const { loading, loggedIn } = useAuth();
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
         <div className="flex items-center gap-3 text-sky-400 font-mono-data text-sm">
@@ -28,7 +30,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!loggedIn) {
     return <Navigate to="/login" replace />;
   }
 
@@ -38,14 +40,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public routes */}
       <Route element={<PublicShell />}>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
       </Route>
 
-      {/* Protected private routes */}
       <Route
         element={
           <ProtectedRoute>
@@ -56,11 +56,11 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/monitor" element={<MonitorConfig />} />
         <Route path="/miner" element={<MinerNode />} />
+        <Route path="/telegram" element={<TelegramPage />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/help" element={<Help />} />
       </Route>
 
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

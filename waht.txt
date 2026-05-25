@@ -1,0 +1,379 @@
+├── api
+
+│   ├── auth-api.ts
+
+│   └── telegram-api.ts
+
+├── App.tsx
+
+├── components
+
+│   ├── Common
+
+│   │   ├── Button.tsx
+
+│   │   ├── Card.tsx
+
+│   │   └── MetricBox.tsx
+
+│   ├── Layout
+
+│   │   ├── AppShell.tsx
+
+│   │   ├── Footer.tsx
+
+│   │   ├── Navbar.tsx
+
+│   │   ├── PublicShell.tsx
+
+│   │   └── Sidebar.tsx
+
+│   └── Metrics
+
+│       ├── LatencyChart.tsx
+
+│       └── LogTable.tsx
+
+├── context
+
+│   ├── AuthContext.tsx
+
+│   └── SolanaWallet.tsx
+
+├── hooks
+
+│   ├── useFetch.ts
+
+│   └── useInterval.ts
+
+├── index.css
+
+├── main.tsx
+
+├── pages
+
+│   ├── Dashboard.tsx
+
+│   ├── Help.tsx
+
+│   ├── Home.tsx
+
+│   ├── Login.tsx
+
+│   ├── MinerNode.tsx
+
+│   ├── MonitorConfig.tsx
+
+│   ├── Settings.tsx
+
+│   ├── Signup.tsx
+
+│   └── TeleGramPage.tsx
+
+└── vite-env.d.ts
+
+
+{{base_url}}/api/v1/monitors/{{monitor_id}}/stats   when calkl this end point  i se tis reponse  {{base_url}}/api/v1/monitors/{{monitor_id}}/stats   {
+    "monitor_id": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+    "check_interval": 60,
+    "uptime_pct_24h": 0,
+    "uptime_pct_7d": 0,
+    "recent_pings": [
+        {
+            "ID": 1795,
+            "MonitorID": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+            "RunnerPubkey": "node_5",
+            "DnsUs": 15574,
+            "TcpUs": 61650,
+            "TlsUs": 61650,
+            "TtfbUs": 30825,
+            "TotalUs": 169784,
+            "LatencyMs": 169,
+            "StatusCode": 404,
+            "Success": false,
+            "ErrorKind": "HttpErrorStatus",
+            "GeoRegion": "brazil",
+            "Latitude": 1.3521,
+            "Longitude": 103.8198,
+            "Timestamp": "2026-05-24T12:08:48.386Z"
+        },
+        {
+            "ID": 1789,
+            "MonitorID": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+            "RunnerPubkey": "node_3",
+            "DnsUs": 79145,
+            "TcpUs": 66366,
+            "TlsUs": 66366,
+            "TtfbUs": 33183,
+            "TotalUs": 245206,
+            "LatencyMs": 245,
+            "StatusCode": 404,
+            "Success": false,
+            "ErrorKind": "HttpErrorStatus",
+            "GeoRegion": "america",
+            "Latitude": 37.7749,
+            "Longitude": -122.4194,
+            "Timestamp": "2026-05-24T12:07:48.348Z"
+        },
+        {
+            "ID": 1783,
+            "MonitorID": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+            "RunnerPubkey": "node_5",
+            "DnsUs": 15651,
+            "TcpUs": 58477,
+            "TlsUs": 58477,
+            "TtfbUs": 29238,
+            "TotalUs": 162033,
+            "LatencyMs": 162,
+            "StatusCode": 404,
+            "Success": false,
+            "ErrorKind": "HttpErrorStatus",
+            "GeoRegion": "brazil",
+            "Latitude": 1.3521,
+            "Longitude": 103.8198,
+            "Timestamp": "2026-05-24T12:06:48.662Z"
+        },
+        {
+            "ID": 1777,
+            "MonitorID": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+            "RunnerPubkey": "node_3",
+            "DnsUs": 25070,
+            "TcpUs": 61307,
+            "TlsUs": 61307,
+            "TtfbUs": 30653,
+            "TotalUs": 178442,
+            "LatencyMs": 178,
+            "StatusCode": 404,
+            "Success": false,
+            "ErrorKind": "HttpErrorStatus",
+            "GeoRegion": "america",
+            "Latitude": 37.7749,
+            "Longitude": -122.4194,
+            "Timestamp": "2026-05-24T12:05:48.357Z"
+        },
+        {
+            "ID": 1771,
+            "MonitorID": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+            "RunnerPubkey": "node_5",
+            "DnsUs": 34877,
+            "TcpUs": 109564,
+            "TlsUs": 109564,
+            "TtfbUs": 54782,
+            "TotalUs": 308926,
+            "LatencyMs": 308,
+            "StatusCode": 404,
+            "Success": false,
+            "ErrorKind": "HttpErrorStatus",
+            "GeoRegion": "brazil",
+            "Latitude": 1.3521,
+            "Longitude": 103.8198,
+            "Timestamp": "2026-05-24T12:04:48.349Z"
+        },
+        {
+            "ID": 1765,
+            "MonitorID": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+            "RunnerPubkey": "node_3",
+            "DnsUs": 11712,
+            "TcpUs": 59797,
+            "TlsUs": 59797,
+            "TtfbUs": 29898,
+            "TotalUs": 161375,
+            "LatencyMs": 161,
+            "StatusCode": 404,
+            "Success": false,
+            "ErrorKind": "HttpErrorStatus",
+            "GeoRegion": "america",
+            "Latitude": 37.7749,
+            "Longitude": -122.4194,
+            "Timestamp": "2026-05-24T12:03:48.355Z"
+        },
+        {
+            "ID": 1759,
+            "MonitorID": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+            "RunnerPubkey": "node_5",
+            "DnsUs": 11260,
+            "TcpUs": 60811,
+            "TlsUs": 60811,
+            "TtfbUs": 30405,
+            "TotalUs": 163443,
+            "LatencyMs": 163,
+            "StatusCode": 404,
+            "Success": false,
+            "ErrorKind": "HttpErrorStatus",
+            "GeoRegion": "brazil",
+            "Latitude": 1.3521,
+            "Longitude": 103.8198,
+            "Timestamp": "2026-05-24T12:02:48.378Z"
+        }
+    ]
+}  bro see reponse clealy like every  check_interval second there is data packet can you notice
+ error  +-4 sec is accepted   packet wih +-10 sec time delay
+
+ {{base_url}}/api/v1/monitors  when called these with auth token then it give these reponse  [
+    {
+        "id": "7b91f840-5f31-470c-9a07-65a777a6a5c6",
+        "target_url": "https://alsocredit.dikkal.com",
+        "interval_seconds": 60,
+        "credit_balance_checks": 0,
+        "total_spent_tokens": 0.1,
+        "is_active": true
+    },
+    {
+        "id": "c386c740-2408-429b-b365-155a7d374f79",
+        "target_url": "https://iamdangerous.dikkal.com",
+        "interval_seconds": 60,
+        "credit_balance_checks": 0,
+        "total_spent_tokens": 0.1,
+        "is_active": true
+    },
+    {
+        "id": "e24442e5-1d8a-4170-b50b-02960c096f6c",
+        "target_url": "https://solana.dikkal.com",
+        "interval_seconds": 60,
+        "credit_balance_checks": 56,
+        "total_spent_tokens": 0.119,
+        "is_active": true
+    },
+    {
+        "id": "71cba6eb-70fa-4559-954d-6a6633bd515c",
+        "target_url": "https://everest.dikkal.com",
+        "interval_seconds": 60,
+        "credit_balance_checks": 867,
+        "total_spent_tokens": 0.133,
+        "is_active": true
+    },
+    {
+        "id": "0dfda675-a6f3-4ad5-a249-dc23660c5453",
+        "target_url": "https://api.dikkal.com",
+        "interval_seconds": 30,
+        "credit_balance_checks": 684,
+        "total_spent_tokens": 0.357,
+        "is_active": true
+    }
+]
+
+package ws
+
+import (
+
+    amqp "github.com/rabbitmq/amqp091-go"
+)
+
+func StartBridge(hub *Hub, ch *amqp.Channel) {
+    // Create a temporary queue for this specific instance to listen to the fanout
+    q, _ := ch.QueueDeclare("", true, true, true, false, nil)
+    ch.QueueBind(q.Name, "", "monitor_updates", false, nil)
+
+    msgs, _ := ch.Consume(q.Name, "", true, false, false, false, nil)
+
+    go func() {
+        for d := range msgs {
+            hub.Broadcast <- d.Body
+        }
+    }()
+}
+  i have this breidge.go and package ws
+
+import (
+    "sync"
+    "github.com/gorilla/websocket"
+)
+
+type Hub struct {
+    Clients    map[*websocket.Conn]bool
+    Broadcast  chan []byte
+    Register   chan *websocket.Conn
+    Unregister chan *websocket.Conn
+    mu         sync.Mutex
+}
+
+func NewHub() *Hub {
+    return &Hub{
+        Clients:    make(map[*websocket.Conn]bool),
+        Broadcast:  make(chan []byte, 256), // Buffered to prevent blocking
+        Register:   make(chan *websocket.Conn),
+        Unregister: make(chan *websocket.Conn),
+    }
+}
+
+func (h *Hub) Run() {
+    for {
+        select {
+        case client := <-h.Register:
+            h.mu.Lock()
+            h.Clients[client] = true
+            h.mu.Unlock()
+
+        case client := <-h.Unregister:
+            h.mu.Lock()
+            if _, ok := h.Clients[client]; ok {
+                delete(h.Clients, client)
+                client.Close()
+            }
+            h.mu.Unlock()
+
+        case msg := <-h.Broadcast:
+            h.mu.Lock()
+            for client := range h.Clients {
+                if err := client.WriteMessage(websocket.TextMessage, msg); err != nil {
+                    client.Close()
+                    delete(h.Clients, client)
+                }
+            }
+            h.mu.Unlock()
+        }
+    }
+}
+ this hub.go for websocket ok
+
+    // Map Protobuf to DTO
+    item := dto.PingResultItem{
+        JobID:       r.JobId,
+        BatchID:     r.BatchId,
+        NodeID:      nodeID,
+        TargetURL:   r.TargetUrl,
+        Success:     r.Success,
+        StatusCode:  int(r.StatusCode),
+        DnsUs:       int64(r.DnsUs),
+        TcpUs:       int64(r.TcpUs),
+        TlsUs:       int64(r.TlsUs),
+        TtfbUs:      int64(r.TtfbUs),
+        TotalUs:     int64(r.TotalUs),
+        LatencyMs:   latencyMs,
+        ErrorKind:   r.ErrorKind,
+        ErrorMsg:    r.ErrorMsg,
+        TimestampMs: int64(r.TimestampMs),
+        GeoRegion:   region,
+        Latitude:    lat,
+        Longitude:   lng,
+    }
+    // Wrap in the ResultPacket structure expected by the worker
+    packet := services.ResultPacket{
+        RunnerPubkey: nodeID,
+        Results:      []dto.PingResultItem{item},
+    }
+
+    body, err := json.Marshal(packet)
+    if err != nil {
+        log.Printf("[grpc] marshal probe result error: %v", err)
+        return
+    }
+
+    ch, err := s.GetHealthyChannel()
+    if err != nil {
+        log.Printf("[grpc] CRITICAL: Cannot publish result. Failed to acquire healthy channel: %v", err)
+        return
+    }
+
+  if err := ch.PublishWithContext(ctx,
+    "monitor_updates", // Publish to the FANOUT exchange
+    "",                // Routing key is empty for fanout
+    false,
+    false,
+    amqp.Publishing{
+        ContentType:  "application/json",
+        Body:         body,
+        DeliveryMode: amqp.Persistent,
+    }, look what data i gfet from websocket a do you undestand and  rember i havce map in fornentd leaflet map  look at it i will share froentd part soon
+if packet is missing turn that part grey if sown red and if status 200 green
+websocket is ony for map ok ad rember can you make something that uptime refresh basedf on check_intercal secong now tell me what you do not code directly
