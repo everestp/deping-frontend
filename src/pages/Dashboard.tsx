@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Activity,
   RefreshCw,
@@ -463,139 +463,29 @@ const [statsCache, setStatsCache] = useState<Record<string, ApiMonitorStats>>({}
       </Card>
 
       {/* Target accordion */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-[var(--text-primary)] flex items-center gap-2">
-            <Activity className="w-4 h-4 text-sky-400" />
-            Monitor Overview
-          </h2>
-          <span className="text-xs font-mono-data text-[var(--text-muted)]">
-            Bars = last 7 check intervals
-          </span>
-        </div>
-
-     <div className="space-y-1">
-  {monitors.map((monitor) => {
-    const sc = STATUS_CONFIG[monitor.status];
-    const isExpanded = expandedId === monitor.id;
-    const stats = statsCache[monitor.id];
-
-    return (
-      <div key={monitor.id} className="border border-[var(--border-subtle)] rounded-lg overflow-hidden">
-        {/* Row Header */}
-        <button
-          onClick={() => handleToggleExpand(monitor.id)}
-          className="w-full flex items-center gap-3 px-3 py-3 hover:bg-white/4 transition-colors text-left"
-        >
-          <span className={`w-2 h-2 rounded-full ${sc.dot} animate-pulse shrink-0`} />
-          <div className="min-w-0 flex-1">
-            <span className="font-semibold text-sm text-[var(--text-primary)]">{formatUrl(monitor.url)}</span>
-          </div>
-
-          {isFetchingStats === monitor.id && <Loader2 className="w-4 h-4 animate-spin text-sky-400" />}
-          {isExpanded ? <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />}
-        </button>
-
-        {/* Expanded Area */}
-       {isExpanded && (
-  <div className="px-4 pb-4 pt-2 bg-black/20 border-t border-[var(--border-subtle)] animate-fade-in-up">
-    {isFetchingStats === monitor.id ? (
-      <div className="text-xs text-sky-400 py-4 flex items-center gap-2">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading updated stats...
-      </div>
-    ) : stats ? (
-      <div className="space-y-4">
-
- {/* --- Time-Sensitive 7-Bar Timeline --- */}
-<div className="space-y-1.5 mb-4">
-  <div className="flex justify-between text-[9px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">
-    <span>Live Heartbeat Status</span>
-    <span>Last 7 Intervals</span>
+<Card>
+  <div className="flex items-center justify-between mb-4">
+    <h2 className="font-semibold text-[var(--text-primary)] flex items-center gap-2">
+      <Activity className="w-4 h-4 text-sky-400" />
+      Monitor Overview
+    </h2>
+    <span className="text-xs font-mono-data text-[var(--text-muted)]">
+      Bars = last 7 check intervals
+    </span>
   </div>
 
-  <div className="flex gap-1 h-6 items-end">
-    {Array.from({ length: 7 }).map((_, i) => {
-      // 1. Calculate the 'Expected' window for this bar
-      const intervalMs = (stats.check_interval || 30) * 1000;
-      const now = Date.now();
-      const windowEnd = now - (i * intervalMs);
-      const windowStart = windowEnd - intervalMs;
-
-      // 2. Check if any ping falls into this specific time window
-      const p = stats.recent_pings.find(ping => {
-        const pingTime = new Date(ping.Timestamp).getTime();
-        return pingTime > windowStart && pingTime <= windowEnd;
-      });
-
-      // 3. Determine color based on time-sensitive presence
-      // - No ping in this window = Grey (Missing/Unknown)
-      // - Ping exists & Success = Green
-      // - Ping exists & Failed = Red
-      const colorClass = !p
-        ? 'bg-zinc-800'           // MISSING: Packet expected but not found
-        : p.Success
-          ? 'bg-emerald-500'      // UP
-          : 'bg-red-500';         // DOWN
-
-      return (
-        <div
-          key={i}
-          className={`flex-1 h-full rounded-[2px] ${colorClass} transition-all duration-300`}
-          title={!p ? `No data for this interval` : `Latency: ${p.LatencyMs}ms`}
-        />
-      );
-    })}
+  <div className="space-y-1">
+    {monitors.map((monitor) => (
+      <MonitorRow
+        key={monitor.id}
+        monitor={monitor}
+        STATUS_CONFIG={STATUS_CONFIG}
+        formatUrl={formatUrl}
+        setSelectedMonitorId={setSelectedMonitorId}
+      />
+    ))}
   </div>
-</div>
-
-        {/* --- Metrics Grid --- */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <MetricBox label="Uptime 24h" value={`${stats.uptime_pct_24h.toFixed(2)}%`} />
-          <MetricBox label="Uptime 7d" value={`${stats.uptime_pct_7d.toFixed(2)}%`} />
-          <MetricBox label="Avg Latency" value={`${(stats.recent_pings.reduce((a, b) => a + b.LatencyMs, 0) / (stats.recent_pings.length || 1)).toFixed(0)}ms`} />
-          <MetricBox label="Interval" value={`${stats.check_interval}s`} />
-        </div>
-
-        {/* --- Log Table --- */}
-        <div className="max-h-40 overflow-y-auto">
-          <table className="w-full text-xs">
-            <thead className="text-[var(--text-muted)] uppercase text-[10px] sticky top-0 bg-black/40 backdrop-blur">
-              <tr>
-                <th className="text-left py-1">Time</th>
-                <th className="text-left py-1">Region</th>
-                <th className="text-right py-1">Latency</th>
-                <th className="text-right py-1">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {stats.recent_pings.map((p) => (
-                <tr key={p.ID} className="hover:bg-white/5">
-                  <td className="py-2 text-[var(--text-muted)] font-mono">{new Date(p.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                  <td className="py-2 text-sky-400">{p.GeoRegion}</td>
-                  <td className="py-2 text-right">{p.LatencyMs}ms</td>
-                  <td className={`py-2 text-right font-semibold ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {p.Success ? 'OK' : 'ERR'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <Button size="sm" onClick={() => setSelectedMonitorId(monitor.id)}>
-          <Globe className="w-3 h-3 mr-2" /> Open Geographic Cockpit
-        </Button>
-      </div>
-    ) : (
-      <div className="text-red-400 text-xs py-2">Failed to load statistics.</div>
-    )}
-  </div>
-)}
-      </div>
-    );
-  })}
-</div>
-      </Card>
+</Card>
 
       {/* Alerts */}
       <Card>
@@ -620,3 +510,120 @@ const [statsCache, setStatsCache] = useState<Record<string, ApiMonitorStats>>({}
     </div>
   );
 }
+
+
+
+// --- Sub-component to manage per-monitor state ---
+const MonitorRow = ({ monitor, STATUS_CONFIG, formatUrl, setSelectedMonitorId }: any) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [stats, setStats] = useState<ApiMonitorStats | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Poll for fresh data ONLY when expanded
+  useEffect(() => {
+    let interval: number;
+    const fetchLatest = async () => {
+      try {
+        const data = await fetchMonitorStats(monitor.id);
+        setStats(data);
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+
+    if (isExpanded) {
+      setLoading(true);
+      fetchLatest();
+      interval = setInterval(fetchLatest, (monitor.check_interval || 30) * 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isExpanded, monitor.id, monitor.check_interval]);
+
+  const sc = STATUS_CONFIG[monitor.status];
+
+  return (
+    <div className="border border-[var(--border-subtle)] rounded-lg overflow-hidden">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center gap-3 px-3 py-3 hover:bg-white/4 transition-colors text-left"
+      >
+        <span className={`w-2 h-2 rounded-full ${sc.dot} animate-pulse shrink-0`} />
+        <span className="font-semibold text-sm text-[var(--text-primary)] flex-1">{formatUrl(monitor.url)}</span>
+        {loading && <Loader2 className="w-4 h-4 animate-spin text-sky-400" />}
+        {isExpanded ? <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />}
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 pt-2 bg-black/20 border-t border-[var(--border-subtle)] animate-fade-in-up">
+          {loading && !stats ? (
+            <div className="text-xs text-sky-400 py-4 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading stats...
+            </div>
+          ) : stats ? (
+            <div className="space-y-4">
+
+              {/* --- Time-Sensitive 7-Bar Timeline --- */}
+              <div className="flex gap-1 h-6 items-end mt-2">
+                {Array.from({ length: 7 }).map((_, i) => {
+                  const intervalMs = (stats.check_interval || 30) * 1000;
+                  const targetTime = Date.now() - (i * intervalMs);
+
+                  // Find ping that fits in this specific time window
+                  const p = stats.recent_pings.find(ping =>
+                    Math.abs(new Date(ping.Timestamp).getTime() - targetTime) < (intervalMs / 2)
+                  );
+
+                  const colorClass = !p
+                    ? 'bg-zinc-800'        // Missing data (Grey)
+                    : p.Success
+                      ? 'bg-emerald-500'  // OK
+                      : 'bg-red-500';     // ERR
+
+                  return (
+                    <div
+                      key={i}
+                      className={`flex-1 h-full rounded-[2px] ${colorClass} transition-all duration-300`}
+                      title={!p ? 'Missing data for this interval' : `Latency: ${p.LatencyMs}ms`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* --- Metrics Grid --- */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <MetricBox label="Uptime 24h" value={`${stats.uptime_pct_24h.toFixed(2)}%`} />
+                <MetricBox label="Uptime 7d" value={`${stats.uptime_pct_7d.toFixed(2)}%`} />
+                <MetricBox label="Avg Latency" value={`${(stats.recent_pings.reduce((a, b) => a + b.LatencyMs, 0) / (stats.recent_pings.length || 1)).toFixed(0)}ms`} />
+                <MetricBox label="Interval" value={`${stats.check_interval}s`} />
+              </div>
+
+              {/* --- Log Table --- */}
+              <div className="max-h-40 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <tbody className="divide-y divide-white/5">
+                    {stats.recent_pings.map((p) => (
+                      <tr key={p.ID}>
+                        <td className="py-2 text-[var(--text-muted)]">{new Date(p.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td className="py-2 text-sky-400">{p.GeoRegion}</td>
+                        <td className="py-2 text-right">{p.LatencyMs}ms</td>
+                        <td className={`py-2 text-right ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>{p.Success ? 'OK' : 'ERR'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <Button size="sm" onClick={() => setSelectedMonitorId(monitor.id)}>
+                <Globe className="w-3 h-3 mr-2" /> Open Geographic Cockpit
+              </Button>
+            </div>
+          ) : (
+            <div className="text-red-400 text-xs py-2">Failed to load statistics.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
