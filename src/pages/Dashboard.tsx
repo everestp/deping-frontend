@@ -280,9 +280,15 @@ function GeoMap({ monitor, onBack }: GeoMapProps) {
                       {p.Success ? `HTTP ${p.StatusCode}` : p.ErrorKind ?? 'Error'}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 font-mono-data text-xs text-[var(--text-muted)]">
-                    {new Date(p.Timestamp).toLocaleTimeString()}
-                  </td>
+                <td className="px-3 py-2.5 font-mono-data text-xs text-[var(--text-muted)]">
+  {p?.TimestampMs && p.TimestampMs > 0
+    ? new Date(p.TimestampMs).toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    : 'N/A'}
+</td>
                 </tr>
               ))}
             </tbody>
@@ -519,7 +525,6 @@ const MonitorRow = ({ monitor, STATUS_CONFIG, formatUrl, setSelectedMonitorId }:
   const [stats, setStats] = useState<ApiMonitorStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Poll for fresh data ONLY when expanded
   useEffect(() => {
     let interval: number;
     const fetchLatest = async () => {
@@ -537,6 +542,19 @@ const MonitorRow = ({ monitor, STATUS_CONFIG, formatUrl, setSelectedMonitorId }:
     }
     return () => clearInterval(interval);
   }, [isExpanded, monitor.id, monitor.check_interval]);
+
+  // --- 1. Pre-calculate the Pings Map for O(1) rendering ---
+  const intervalMs = (stats?.check_interval || 30) * 1000;
+  const pingMap = useMemo(() => {
+    if (!stats) return new Map<number, ApiPing>();
+    const map = new Map<number, ApiPing>();
+    stats.recent_pings.forEach((p) => {
+      // Create a unique Bucket ID based on universal Unix time
+      const bucketId = Math.floor(p.TimestampMs / intervalMs);
+      map.set(bucketId, p);
+    });
+    return map;
+  }, [stats, intervalMs]);
 
   const sc = STATUS_CONFIG[monitor.status];
 
@@ -560,34 +578,31 @@ const MonitorRow = ({ monitor, STATUS_CONFIG, formatUrl, setSelectedMonitorId }:
             </div>
           ) : stats ? (
             <div className="space-y-4">
+              {/* --- Timeline (7 Buckets) --- */}
+            {/* --- Timeline (7 Buckets: Left = Oldest, Right = Newest) --- */}
+<div className="flex gap-1 h-6 items-end mt-2">
+  {Array.from({ length: 7 }).map((_, i) => {
+    // i=0 is the oldest (left), i=6 is now (right)
+    // We calculate the bucket relative to 'now'
+    const offset = 6 - i;
+    const currentBucketId = Math.floor(Date.now() / intervalMs) - offset;
+    const p = pingMap.get(currentBucketId);
 
-              {/* --- Time-Sensitive 7-Bar Timeline --- */}
-              <div className="flex gap-1 h-6 items-end mt-2">
-                {Array.from({ length: 7 }).map((_, i) => {
-                  const intervalMs = (stats.check_interval || 30) * 1000;
-                  const targetTime = Date.now() - (i * intervalMs);
+    const bucketTime = new Date(currentBucketId * intervalMs);
+    const timeLabel = bucketTime.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
-                  // Find ping that fits in this specific time window
-                  const p = stats.recent_pings.find(ping =>
-                    Math.abs(new Date(ping.Timestamp).getTime() - targetTime) < (intervalMs / 2)
-                  );
+    // Status logic: gray for missing, green for success, red for error
+    const colorClass = !p ? 'bg-zinc-800' : p.Success ? 'bg-emerald-500' : 'bg-red-500';
 
-                  const colorClass = !p
-                    ? 'bg-zinc-800'        // Missing data (Grey)
-                    : p.Success
-                      ? 'bg-emerald-500'  // OK
-                      : 'bg-red-500';     // ERR
-
-                  return (
-                    <div
-                      key={i}
-                      className={`flex-1 h-full rounded-[2px] ${colorClass} transition-all duration-300`}
-                      title={!p ? 'Missing data for this interval' : `Latency: ${p.LatencyMs}ms`}
-                    />
-                  );
-                })}
-              </div>
-
+    return (
+      <div
+        key={currentBucketId} // Use bucketId as key for stability
+        className={`flex-1 h-full rounded-[2px] ${colorClass} transition-all duration-300`}
+        title={!p ? `Missing: ${timeLabel}` : `Latency: ${p.LatencyMs}ms @ ${timeLabel}`}
+      />
+    );
+  })}
+</div>
               {/* --- Metrics Grid --- */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <MetricBox label="Uptime 24h" value={`${stats.uptime_pct_24h.toFixed(2)}%`} />
@@ -596,13 +611,16 @@ const MonitorRow = ({ monitor, STATUS_CONFIG, formatUrl, setSelectedMonitorId }:
                 <MetricBox label="Interval" value={`${stats.check_interval}s`} />
               </div>
 
-              {/* --- Log Table --- */}
+              {/* --- Log Table (Using Localized Timestamp) --- */}
               <div className="max-h-40 overflow-y-auto">
                 <table className="w-full text-xs">
                   <tbody className="divide-y divide-white/5">
                     {stats.recent_pings.map((p) => (
                       <tr key={p.ID}>
-                        <td className="py-2 text-[var(--text-muted)]">{new Date(p.Timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        {/* Always use TimestampMs for local conversion */}
+                        <td className="py-2 text-[var(--text-muted)]">
+                           {new Date(p.TimestampMs).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                        </td>
                         <td className="py-2 text-sky-400">{p.GeoRegion}</td>
                         <td className="py-2 text-right">{p.LatencyMs}ms</td>
                         <td className={`py-2 text-right ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>{p.Success ? 'OK' : 'ERR'}</td>
@@ -624,6 +642,5 @@ const MonitorRow = ({ monitor, STATUS_CONFIG, formatUrl, setSelectedMonitorId }:
     </div>
   );
 };
-
 
 

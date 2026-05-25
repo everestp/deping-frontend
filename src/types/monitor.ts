@@ -25,9 +25,9 @@ export interface ApiPing {
   GeoRegion: string;
   Latitude: number;
   Longitude: number;
-  Timestamp: string; // ISO string
+  Timestamp: string;    // Keep this for simple display if you want
+  TimestampMs: number;  // 🚀 ADD THIS: Use this for all your logic/sorting/bucketing
 }
-
 export interface ApiMonitorStats {
   monitor_id: string;
   check_interval: number;

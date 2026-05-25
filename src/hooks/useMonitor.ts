@@ -13,7 +13,18 @@ import type {
 
 const WS_URL = "ws://localhost:8080/ws";
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
+// ─── Interfaces ──────────────────────────────────────────────────────────────
+
+export interface UseMonitorsReturn {
+  monitors: MonitorView[];
+  nodeStatuses: Record<string, NodeStatus>;
+  loading: boolean;
+  error: string | null;
+  lastRefresh: Date;
+  refresh: () => Promise<void>;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function deriveStatus(uptime: number) {
   if (uptime >= 99) return 'healthy' as const;
@@ -21,25 +32,32 @@ function deriveStatus(uptime: number) {
   return 'down' as const;
 }
 
-function buildBars(pings: ApiPing[], intervalSeconds: number): BarSegment[] {
+function buildBars(pings: ApiPing[] | undefined | null, intervalSeconds: number): BarSegment[] {
   const now = Date.now();
+  const intervalMs = intervalSeconds * 1000;
   const bars: BarSegment[] = [];
+  const safePings = pings || [];
+
   for (let i = 6; i >= 0; i--) {
-    const windowEnd = now - i * intervalSeconds * 1000;
-    const windowStart = windowEnd - intervalSeconds * 1000;
-    const inWindow = pings.filter((p) => {
-      const ts = new Date(p.Timestamp).getTime();
+    const windowEnd = now - (i * intervalMs);
+    const windowStart = windowEnd - intervalMs;
+
+    const inWindow = safePings.filter((p) => {
+      const ts = p.TimestampMs > 0 ? p.TimestampMs : new Date(p.Timestamp).getTime();
       return ts >= windowStart && ts < windowEnd;
     });
+
     const successCount = inWindow.filter((p) => p.Success).length;
     const failCount = inWindow.filter((p) => !p.Success).length;
+
     let status: BarStatus = 'gray';
     if (inWindow.length > 0) {
       status = successCount >= failCount ? 'green' : 'red';
     }
+
     const d = new Date(windowStart);
     bars.push({
-      windowStart: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+      windowStart: d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
       status,
       successCount,
       failCount,
@@ -48,14 +66,14 @@ function buildBars(pings: ApiPing[], intervalSeconds: number): BarSegment[] {
   return bars;
 }
 
-function avgLatency(pings: ApiPing[]): number {
-  if (pings.length === 0) return 0;
+function avgLatency(pings: ApiPing[] | undefined | null): number {
+  if (!pings || !Array.isArray(pings) || pings.length === 0) return 0;
   return Math.round(pings.reduce((s, p) => s + p.LatencyMs, 0) / pings.length);
 }
 
-// ─── hook ─────────────────────────────────────────────────────────────────────
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useMonitors() {
+export function useMonitors(): UseMonitorsReturn {
   const [monitors, setMonitors] = useState<MonitorView[]>([]);
   const [nodeStatuses, setNodeStatuses] = useState<Record<string, NodeStatus>>({});
   const [loading, setLoading] = useState(true);
@@ -69,6 +87,8 @@ export function useMonitors() {
   const loadStats = useCallback(async (monitor: ApiMonitor) => {
     try {
       const stats = await fetchMonitorStats(monitor.id);
+      if (!stats) return;
+
       setMonitors((prev) => {
         const next = [...prev];
         const idx = next.findIndex((m) => m.id === monitor.id);
@@ -77,12 +97,12 @@ export function useMonitors() {
           url: monitor.target_url,
           intervalSeconds: monitor.interval_seconds,
           isActive: monitor.is_active,
-          status: deriveStatus(stats.uptime_pct_24h),
-          uptimePct24h: stats.uptime_pct_24h,
-          uptimePct7d: stats.uptime_pct_7d,
+          status: deriveStatus(stats.uptime_pct_24h ?? 0),
+          uptimePct24h: stats.uptime_pct_24h ?? 0,
+          uptimePct7d: stats.uptime_pct_7d ?? 0,
           avgLatencyMs: avgLatency(stats.recent_pings),
           bars: buildBars(stats.recent_pings, stats.check_interval),
-          recentPings: stats.recent_pings,
+          recentPings: stats.recent_pings || [],
         };
         if (idx === -1) next.push(view);
         else next[idx] = view;
@@ -94,35 +114,7 @@ export function useMonitors() {
     }
   }, []);
 
-  // 1. Initial Load & Polling
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const apiMonitors = await fetchMonitors();
-        if (cancelled) return;
-        apiMonitors.forEach((m) => intervalMapRef.current.set(m.id, m.interval_seconds));
-        await Promise.all(apiMonitors.map(loadStats));
-        if (cancelled) return;
-        setLoading(false);
-        apiMonitors.forEach((m) => {
-          const tid = setInterval(() => loadStats(m), m.interval_seconds * 1000);
-          timersRef.current.set(m.id, tid);
-        });
-      } catch (e: unknown) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Failed to load');
-          setLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-      timersRef.current.forEach((tid) => clearInterval(tid));
-    };
-  }, [loadStats]);
-
-  // 2. WebSocket Connection
+  // WebSocket
   useEffect(() => {
     let reconnectTimeout: ReturnType<typeof setTimeout>;
     function connect() {
@@ -158,33 +150,37 @@ export function useMonitors() {
     return () => { clearTimeout(reconnectTimeout); wsRef.current?.close(); };
   }, []);
 
-  // 3. Centralized Staleness Cleaner
+  // Initial Load
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setNodeStatuses((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        const maxInterval = Math.max(...Array.from(intervalMapRef.current.values()), 60);
-        for (const key in next) {
-          if (now - next[key].lastSeenMs > (maxInterval + 10) * 1000) {
-            if (next[key].status !== 'gray') {
-              next[key] = { ...next[key], status: 'gray' };
-              changed = true;
-            }
-          }
+    let cancelled = false;
+    (async () => {
+      try {
+        const apiMonitors = await fetchMonitors();
+        if (cancelled) return;
+        apiMonitors.forEach((m) => intervalMapRef.current.set(m.id, m.interval_seconds));
+        await Promise.all(apiMonitors.map(loadStats));
+        if (cancelled) return;
+        setLoading(false);
+        apiMonitors.forEach((m) => {
+          const tid = setInterval(() => loadStats(m), m.interval_seconds * 1000);
+          timersRef.current.set(m.id, tid);
+        });
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Failed to load');
+          setLoading(false);
         }
-        return changed ? next : prev;
-      });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      timersRef.current.forEach((tid) => clearInterval(tid));
+    };
+  }, [loadStats]);
 
   const refresh = useCallback(async () => {
-    try {
-      const apiMonitors = await fetchMonitors();
-      await Promise.all(apiMonitors.map(loadStats));
-    } catch (e) { console.warn(e); }
+    const apiMonitors = await fetchMonitors();
+    await Promise.all(apiMonitors.map(loadStats));
   }, [loadStats]);
 
   return { monitors, nodeStatuses, loading, error, lastRefresh, refresh };
