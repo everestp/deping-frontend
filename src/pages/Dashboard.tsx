@@ -21,7 +21,8 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useMonitors } from '../hooks/useMonitor';
-import type { MonitorView, NodeStatus, ApiPing, BarStatus } from '../types/monitor';
+import type { MonitorView, NodeStatus, ApiPing, BarStatus, ApiMonitorStats } from '../types/monitor';
+import { fetchMonitorStats } from '../api/monitor-api';
 
 // ─── Leaflet icon fix ─────────────────────────────────────────────────────────
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -309,8 +310,35 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonitorId, setSelectedMonitorId] = useState<string | null>(null);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-
+const [expandedId, setExpandedId] = useState<string | null>(null);
+const [isFetchingStats, setIsFetchingStats] = useState<string | null>(null);
+const [statsCache, setStatsCache] = useState<Record<string, ApiMonitorStats>>({});
   const selectedMonitor = monitors.find((m) => m.id === selectedMonitorId) ?? null;
+
+
+
+  const handleToggleExpand = async (monitorId: string) => {
+  // If closing, just clear
+  if (expandedId === monitorId) {
+    setExpandedId(null);
+    return;
+  }
+
+  setExpandedId(monitorId);
+
+  // Fetch only if not already in cache
+  if (!statsCache[monitorId]) {
+    setIsFetchingStats(monitorId);
+    try {
+      const stats = await fetchMonitorStats(monitorId);
+      setStatsCache((prev) => ({ ...prev, [monitorId]: stats }));
+    } catch (e) {
+      console.error("Failed to load stats:", e);
+    } finally {
+      setIsFetchingStats(null);
+    }
+  }
+};
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -446,119 +474,82 @@ export default function Dashboard() {
           </span>
         </div>
 
-        <div className="space-y-1">
-          {monitors.map((monitor) => {
-            const sc = STATUS_CONFIG[monitor.status];
-            const isExpanded = expandedRow === monitor.id;
+     <div className="space-y-1">
+  {monitors.map((monitor) => {
+    const sc = STATUS_CONFIG[monitor.status];
+    const isExpanded = expandedId === monitor.id;
+    const stats = statsCache[monitor.id];
 
-            return (
-              <div key={monitor.id}>
-                <button
-                  onClick={() => setExpandedRow(isExpanded ? null : monitor.id)}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-white/4 transition-colors text-left"
-                >
-                  <span className={`w-2 h-2 rounded-full ${sc.dot} animate-pulse shrink-0`} />
+    return (
+      <div key={monitor.id} className="border border-[var(--border-subtle)] rounded-lg overflow-hidden">
+        {/* Row Header */}
+        <button
+          onClick={() => handleToggleExpand(monitor.id)}
+          className="w-full flex items-center gap-3 px-3 py-3 hover:bg-white/4 transition-colors text-left"
+        >
+          <span className={`w-2 h-2 rounded-full ${sc.dot} animate-pulse shrink-0`} />
+          <div className="min-w-0 flex-1">
+            <span className="font-semibold text-sm text-[var(--text-primary)]">{formatUrl(monitor.url)}</span>
+          </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-[var(--text-primary)] truncate">
-                        {formatUrl(monitor.url)}
-                      </span>
-                      <span className={`text-[10px] font-mono-data px-1.5 py-0.5 rounded border ${sc.bg} ${sc.color}`}>
-                        {sc.label}
-                      </span>
-                    </div>
-                    <span className="text-xs font-mono-data text-[var(--text-muted)] truncate block">
-                      {monitor.url} — every {monitor.intervalSeconds}s
-                    </span>
-                  </div>
+          {isFetchingStats === monitor.id && <Loader2 className="w-4 h-4 animate-spin text-sky-400" />}
+          {isExpanded ? <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" /> : <ChevronRight className="w-4 h-4 text-[var(--text-muted)]" />}
+        </button>
 
-                  {/* 7-bar timeline */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {monitor.bars.map((bar, bi) => (
-                      <div
-                        key={`${monitor.id}-bar-${bi}`}
-                        className={`w-5 h-5 rounded-sm border ${BAR_COLORS[bar.status]} ${BAR_BORDERS[bar.status]} transition-colors`}
-                        title={`${bar.windowStart}: ${bar.successCount} ok, ${bar.failCount} fail`}
-                      />
-                    ))}
-                  </div>
+        {/* Expanded Area */}
+        {isExpanded && (
+          <div className="px-4 pb-4 pt-2 bg-black/20 border-t border-[var(--border-subtle)]">
+            {isFetchingStats === monitor.id ? (
+              <div className="text-xs text-sky-400 py-4">Loading stats...</div>
+            ) : stats ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <MetricBox label="Uptime 24h" value={`${stats.uptime_pct_24h.toFixed(2)}%`} />
+                  <MetricBox label="Uptime 7d" value={`${stats.uptime_pct_7d.toFixed(2)}%`} />
+                  <MetricBox label="Avg Latency" value={`${(stats.recent_pings.reduce((a, b) => a + b.LatencyMs, 0) / (stats.recent_pings.length || 1)).toFixed(0)}ms`} />
+                  <MetricBox label="Interval" value={`${stats.check_interval}s`} />
+                </div>
 
-                  <div className="text-right shrink-0 hidden sm:block">
-                    <p className="font-mono-data text-xs font-semibold text-emerald-400">
-                      {monitor.uptimePct24h.toFixed(2)}%
-                    </p>
-                    <p className="font-mono-data text-[10px] text-[var(--text-muted)]">
-                      {monitor.avgLatencyMs}ms
-                    </p>
-                  </div>
+                <div className="max-h-40 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead className="text-[var(--text-muted)] uppercase text-[10px]">
+                      <tr>
+                        <th className="text-left py-1">Time</th>
+                        <th className="text-left py-1">Region</th>
+                        <th className="text-left py-1">Node</th>
+                        <th className="text-right py-1">Latency</th>
+                        <th className="text-right py-1">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {stats.recent_pings.map((p) => (
+                        <tr key={p.ID}>
+                          <td className="py-2 text-[var(--text-muted)]">{new Date(p.Timestamp).toLocaleTimeString()}</td>
+                          <td className="py-2 text-sky-400">{p.GeoRegion}</td>
+                          <td className="py-2">{p.RunnerPubkey}</td>
+                          <td className="py-2 text-right">{p.LatencyMs}ms</td>
+                          <td className={`py-2 text-right ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {p.Success ? 'OK' : p.ErrorKind}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                  {isExpanded
-                    ? <ChevronDown className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
-                    : <ChevronRight className="w-4 h-4 text-[var(--text-muted)] shrink-0" />}
-                </button>
-
-                {isExpanded && (
-                  <div className="ml-5 mr-3 mb-2 p-4 glass rounded-lg border border-[var(--border-subtle)] animate-fade-in-up">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                      <div className="text-center">
-                        <p className="text-xs text-[var(--text-muted)]">Uptime 24h</p>
-                        <p className="font-mono-data text-lg font-bold text-emerald-400">{monitor.uptimePct24h.toFixed(2)}%</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-[var(--text-muted)]">Uptime 7d</p>
-                        <p className="font-mono-data text-lg font-bold text-emerald-400">{monitor.uptimePct7d.toFixed(2)}%</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-[var(--text-muted)]">Avg Latency</p>
-                        <p className="font-mono-data text-lg font-bold text-sky-400">{monitor.avgLatencyMs}ms</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs text-[var(--text-muted)]">Check Interval</p>
-                        <p className="font-mono-data text-lg font-bold text-[var(--text-primary)]">{monitor.intervalSeconds}s</p>
-                      </div>
-                    </div>
-
-                    {/* Recent pings table */}
-                    <div className="mb-4 max-h-36 overflow-y-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-[var(--border-subtle)]">
-                            {['Time', 'Region', 'Node', 'Latency', 'Status'].map((h) => (
-                              <th key={h} className="text-left px-2 py-1.5 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--border-subtle)]">
-                          {monitor.recentPings.slice(0, 6).map((p) => (
-                            <tr key={p.ID} className="hover:bg-white/3">
-                              <td className="px-2 py-1.5 font-mono-data text-[var(--text-muted)]">
-                                {new Date(p.Timestamp).toLocaleTimeString()}
-                              </td>
-                              <td className="px-2 py-1.5 font-mono-data text-sky-400">{p.GeoRegion}</td>
-                              <td className="px-2 py-1.5 font-mono-data text-[var(--text-muted)]">{p.RunnerPubkey}</td>
-                              <td className="px-2 py-1.5 font-mono-data text-[var(--text-primary)]">{p.LatencyMs}ms</td>
-                              <td className="px-2 py-1.5">
-                                <span className={`font-mono-data ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>
-                                  {p.Success ? `HTTP ${p.StatusCode}` : p.ErrorKind ?? 'Error'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <Button size="sm" onClick={() => setSelectedMonitorId(monitor.id)} className="animate-border-glow">
-                      <Globe className="w-3.5 h-3.5" />
-                      Open Geographic Cockpit
-                    </Button>
-                  </div>
-                )}
+                <Button size="sm" onClick={() => setSelectedMonitorId(monitor.id)}>
+                  <Globe className="w-3 h-3 mr-2" /> Open Geographic Cockpit
+                </Button>
               </div>
-            );
-          })}
-        </div>
+            ) : (
+              <div className="text-red-400 text-xs py-2">Failed to load statistics.</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  })}
+</div>
       </Card>
 
       {/* Alerts */}
