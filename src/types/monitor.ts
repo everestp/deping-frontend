@@ -39,31 +39,31 @@ export interface ApiMonitorStats {
 // ─── WebSocket packet (from RabbitMQ fanout via bridge.go) ────────────────────
 
 export interface WsResultPacket {
-  RunnerPubkey: string;
-  Results: WsPingResult[];
+  runner_pubkey: string;
+  signature: string;
+  results: WsPingResult[]; // Match lowercase 'results' tag
 }
 
 export interface WsPingResult {
-  JobID: string;
-  BatchID: string;
-  NodeID: string;
-  TargetURL: string;
-  Success: boolean;
-  StatusCode: number;
-  DnsUs: number;
-  TcpUs: number;
-  TlsUs: number;
-  TtfbUs: number;
-  TotalUs: number;
-  LatencyMs: number;
-  ErrorKind: string;
-  ErrorMsg: string;
-  TimestampMs: number;
-  GeoRegion: string;
-  Latitude: number;
-  Longitude: number;
+  job_id: string;        // Match snake_case tags
+  batch_id: string;
+  node_id: string;
+  target_url: string;
+  success: boolean;      // Match lowercase 'success'
+  status_code: number;
+  dns_us: number;
+  tcp_us: number;
+  tls_us: number;
+  ttfb_us: number;
+  total_us: number;
+  latency_ms: number;
+  error_kind: string;
+  error_msg: string;
+  timestamp_ms: number;
+  geo_region: string;
+  latitude: number;
+  longitude: number;
 }
-
 // ─── Frontend view models ─────────────────────────────────────────────────────
 
 export type BarStatus = 'green' | 'red' | 'gray';
