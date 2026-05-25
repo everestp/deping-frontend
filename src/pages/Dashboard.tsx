@@ -309,7 +309,7 @@ export default function Dashboard() {
   const { monitors, nodeStatuses, loading, error, lastRefresh, refresh } = useMonitors();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonitorId, setSelectedMonitorId] = useState<string | null>(null);
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
 const [expandedId, setExpandedId] = useState<string | null>(null);
 const [isFetchingStats, setIsFetchingStats] = useState<string | null>(null);
 const [statsCache, setStatsCache] = useState<Record<string, ApiMonitorStats>>({});
