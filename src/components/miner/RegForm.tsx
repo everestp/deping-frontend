@@ -57,12 +57,12 @@ export function RegForm({ ownerPubkey, registering, error, onRegister }: RegForm
   async function handleSubmit() {
     setLocalError(null);
     if (!validate()) return;
-    await onRegister({
-      owner_pubkey: "Dfdf",
-      node_pubkey: nodePubkey.trim(),
-      region:"swds",
-      latitude,
-      longitude,
+   await onRegister({
+      owner_pubkey: ownerPubkey, // From props
+      node_pubkey: nodePubkey.trim(), // Correctly mapped to node_pubkey
+      region: region,
+      latitude: latitude,
+      longitude: longitude,
     });
   }
 

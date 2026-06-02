@@ -4,22 +4,27 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Cpu } from 'lucide-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, SystemProgram } from '@solana/web3.js';
+import { BN } from '@coral-xyz/anchor';
 
-import { WalletGate }      from '../components/miner/WalletGate';
-import { RegForm }         from '../components/miner/RegForm';
-import { StakingPayment }  from '../components/miner/StakingPayment';
-import { Dashboard }       from '../components/miner/Dashboard';
+import { WalletGate }     from '../components/miner/WalletGate';
+import { Activate }       from '../components/miner/Activate';
+import { RegForm }        from '../components/miner/RegForm';
+import { StakingPayment } from '../components/miner/StakingPayment';
+import { Dashboard }      from '../components/miner/Dashboard';
 
 import {
   getRunnerMe,
   registerRunner,
+  activateNode,
   validateStakePayment,
   sendHeartbeat,
-  ApiError,
 } from '../api/node-api';
 
-import { useSolanaWallet } from '../context/SolanaWallet';
-import { useInterval }     from '../hooks/useInterval';
+import { useProgram }                              from '../solana/program/anchor-provider';
+import { getEmailHash, getNodePDA, stakeTokens }   from '../solana/program/breezo.method';
+import { useInterval }                             from '../hooks/useInterval';
 
 import type {
   MinerView,
@@ -29,10 +34,15 @@ import type {
   RegisterPayload,
 } from '../types/miner';
 
-// ── Terminal helpers ────────────────────────────────────────
+// ── Mint ────────────────────────────────────────────────────
 
-const NODE_REGIONS  = ['AP-South-1', 'US-East-2', 'EU-Central-1', 'US-West-1', 'SA-East-1'];
-const TARGETS_POOL  = [
+const DEEPING_MINT = new PublicKey('2V5HdggYQXW1Z9nhrVKjNdYqg5NsQnZhwMERYr8WK1pU');
+const TOKEN_DECIMALS = 1_000_000_000; // 9 decimals
+
+// ── Terminal helpers ─────────────────────────────────────────
+
+const NODE_REGIONS = ['AP-South-1', 'US-East-2', 'EU-Central-1', 'US-West-1', 'SA-East-1'];
+const TARGETS_POOL = [
   'https://api.deping.xyz',
   'https://solana.com',
   'https://api.coingecko.com',
@@ -42,7 +52,7 @@ const TARGETS_POOL  = [
 
 function buildTermLine(): TerminalLine {
   const now    = new Date();
-  const ts     = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} UTC`;
+  const ts     = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} UTC`;
   const region = NODE_REGIONS[Math.floor(Math.random() * NODE_REGIONS.length)];
   const target = TARGETS_POOL[Math.floor(Math.random() * TARGETS_POOL.length)];
   const ms     = Math.floor(Math.random() * 180) + 12;
@@ -54,200 +64,309 @@ function buildTermLine(): TerminalLine {
   };
 }
 
-function randMicro(): number {
+function randMicro() {
   return parseFloat((Math.random() * 0.05 + 0.03).toFixed(4));
 }
 
-function nowTs(): string {
+function nowTs() {
   const d = new Date();
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')} UTC`;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} UTC`;
 }
 
-// ── Component ───────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────
 
 export default function MinerNode() {
-  const { wallet, connect, connecting } = useSolanaWallet();
+  const { connected, publicKey } = useWallet();
+  const { connection }           = useConnection();
+  const program                  = useProgram();
 
-  // ── View state ─────────────────────────────────────────
-  const [view, setView]       = useState<MinerView>('loading');
-  const [runner, setRunner]   = useState<RunnerNode | null>(null);
+  // ── View ────────────────────────────────────────────────
+  const [view, setView] = useState<MinerView>('loading');
 
-  // ── Registration ───────────────────────────────────────
+  // ── Runner data ─────────────────────────────────────────
+  const [runner, setRunner] = useState<RunnerNode | null>(null);
+
+  // ── Wallet DPNG balance ─────────────────────────────────
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  // ── Registration ────────────────────────────────────────
   const [registering, setRegistering] = useState(false);
   const [regError, setRegError]       = useState<string | null>(null);
 
-  // ── Staking ────────────────────────────────────────────
-  const [staking, setStaking]         = useState(false);
-  const [stakeError, setStakeError]   = useState<string | null>(null);
+  // ── Activate ────────────────────────────────────────────
+  const [activating, setActivating]     = useState(false);
+  const [activateError, setActivateError] = useState<string | null>(null);
 
-  // ── Dashboard ──────────────────────────────────────────
+  // ── Staking ─────────────────────────────────────────────
+  const [staking, setStaking]     = useState(false);
+  const [stakeError, setStakeError] = useState<string | null>(null);
+
+  // ── Dashboard balances ───────────────────────────────────
   const [offChainBalance, setOffChainBalance] = useState(0);
   const [onChainBalance, setOnChainBalance]   = useState(0);
   const [pendingTxs, setPendingTxs]           = useState<PendingTx[]>([]);
   const [termLines, setTermLines]             = useState<TerminalLine[]>(() =>
     Array.from({ length: 6 }, buildTermLine),
   );
-  const [claiming, setClaiming]               = useState(false);
-  const [claimAlert, setClaimAlert]           = useState<string | null>(null);
-  const [claimSuccess, setClaimSuccess]       = useState<string | null>(null);
 
-  // ── Boot: resolve view from wallet + API ───────────────
+  // ── Claim feedback ───────────────────────────────────────
+  const [claiming, setClaiming]         = useState(false);
+  const [claimAlert, setClaimAlert]     = useState<string | null>(null);
+  const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
+
+  // ── Boot: fetch wallet balance + runner state ────────────
   useEffect(() => {
-    if (!wallet?.connected || !wallet?.publicKey) {
+    if (!connected || !publicKey) {
       setView('no-wallet');
       return;
     }
 
     setView('loading');
 
-    getRunnerMe(wallet.publicKey)
-      .then((r) => {
-        setRunner(r);
-        setOffChainBalance(r.offchain_accumulated_tokens);
-        setOnChainBalance(r.total_earned_tokens_all_time);
-        // If registered but not yet a validator → go to stake screen
-        setView(r.is_validator ? 'dashboard' : 'stake');
+    // Fetch DPNG token balance in parallel with runner state
+    connection
+      .getParsedTokenAccountsByOwner(publicKey, { mint: DEEPING_MINT })
+      .then((accounts) => {
+        const info    = accounts.value[0]?.account.data.parsed.info;
+        const balance = info ? (info.tokenAmount.uiAmount ?? 0) : 0;
+        setWalletBalance(balance);
       })
-      .catch((err: ApiError) => {
-        // 404 → never registered
-        if (err.status === 404) {
-          setView('register');
-        } else {
-          // unexpected — let user register/retry
-          setView('register');
-        }
-      });
-  }, [wallet?.connected, wallet?.publicKey]);
+      .catch(console.error);
 
-  // ── Heartbeat every 30 s ───────────────────────────────
+    // Fetch runner state from backend
+    getRunnerMe(publicKey.toBase58())
+      .then((resp) => {
+        if (resp.node) {
+          setRunner(resp.node);
+          setOffChainBalance(resp.node.offchain_accumulated_tokens);
+          setOnChainBalance(resp.node.total_earned_tokens_all_time);
+        }
+        setView(resp.view);
+      })
+      .catch(() => {
+        // Network error or 401 — fall back to register
+        setView('register');
+      });
+  }, [connected, publicKey, connection]);
+
+  // ── Heartbeat every 30 s when dashboard active ───────────
   useInterval(() => {
     if (view === 'dashboard' && runner?.node_pubkey) {
       sendHeartbeat(runner.node_pubkey);
     }
   }, 30_000);
 
-  // ── Off-chain micro-reward tick every 2.5 s ────────────
+  // ── Off-chain micro-reward tick every 2.5 s ──────────────
   useInterval(() => {
     if (view === 'dashboard') {
       setOffChainBalance((p) => parseFloat((p + randMicro()).toFixed(6)));
     }
   }, 2_500);
 
-  // ── Terminal line every 3.2 s ──────────────────────────
+  // ── Terminal line feed every 3.2 s ───────────────────────
   useInterval(() => {
     if (view === 'dashboard') {
       setTermLines((prev) => [...prev.slice(-29), buildTermLine()]);
     }
   }, 3_200);
 
-  // ── Handlers ───────────────────────────────────────────
+  // ── HANDLER: register ────────────────────────────────────
+  const handleRegister = useCallback(
+    async (payload: RegisterPayload) => {
+      setRegError(null);
+      setRegistering(true);
+      try {
+        const r = await registerRunner(payload);
+        setRunner(r);
+        // After register, node_pda is null → next step is activate
+        setView('activate');
+      } catch (err: unknown) {
+        setRegError(err instanceof Error ? err.message : 'Registration failed.');
+      } finally {
+        setRegistering(false);
+      }
+    },
+    [],
+  );
 
-  const handleRegister = useCallback(async (payload: RegisterPayload) => {
-    setRegError(null);
-    setRegistering(true);
+  // ── HANDLER: activate (initNode on-chain) ────────────────
+  const handleActivate = useCallback(async () => {
+    if (!publicKey || !program || !runner) return;
+
+    setActivateError(null);
+    setActivating(true);
+
     try {
-      const r = await registerRunner(payload);
-      setRunner(r);
-      setOffChainBalance(r.offchain_accumulated_tokens);
-      setOnChainBalance(r.total_earned_tokens_all_time);
-      // Always move to stake — is_validator is false after register
+      // 1. Derive email hash + node PDA (same seeds as Rust: ["node", owner, email_hash])
+      const emailHash  = getEmailHash(runner.owner_email);
+      const nodePDA    = getNodePDA(publicKey, emailHash);
+
+      // 2. Call initNode on-chain — user wallet pays rent (~0.002 SOL)
+      await program.methods
+        .initNode(Array.from(emailHash))
+        .accounts({
+          nodeAccount:   nodePDA,
+          owner:         publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+      // 3. Save node_pda to backend so /runner/me returns 'stake' next time
+      const updated = await activateNode(nodePDA.toBase58());
+      setRunner(updated);
+
       setView('stake');
     } catch (err: unknown) {
-      setRegError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      const msg = err instanceof Error ? err.message : 'Activation failed.';
+      // Friendly message for already-initialized account
+      setActivateError(
+        msg.includes('already in use') || msg.includes('0x0')
+          ? 'Node account already initialized on-chain. Proceeding to stake...'
+          : msg,
+      );
+      // If already initialized, still advance
+      if (msg.includes('already in use') || msg.includes('0x0')) {
+        setTimeout(() => setView('stake'), 1500);
+      }
     } finally {
-      setRegistering(false);
+      setActivating(false);
     }
-  }, []);
+  }, [publicKey, program, runner]);
 
-  const handleStake = useCallback(async (amount: number) => {
-    if (!wallet?.publicKey) return;
-    setStakeError(null);
-    setStaking(true);
+  // ── HANDLER: stake ───────────────────────────────────────
+  const handleStake = useCallback(
+    async (amount: number) => {
+      if (!publicKey || !program || !runner) {
+        setStakeError('Wallet, program, or node not initialized.');
+        return;
+      }
 
-    try {
-      // 1. Fire on-chain Solana transaction via wallet adapter
-      //    Replace with your real Anchor/web3.js staking call.
-      //    The wallet returns a confirmed tx_signature automatically.
-      const tx_signature: string = await wallet.sendStakeTransaction(amount);
+      setStakeError(null);
+      setStaking(true);
 
-      // 2. Tell backend to verify + flip is_validator = true
-      const updated = await validateStakePayment(amount, tx_signature);
+      try {
+        // 1. Derive node PDA from email
+        const emailHash = getEmailHash(runner.owner_email);
+        const nodePDA   = getNodePDA(publicKey, emailHash);
 
-      setRunner(updated);
-      setOffChainBalance(updated.offchain_accumulated_tokens);
-      setOnChainBalance(updated.total_earned_tokens_all_time);
+        // 2. Guard: ensure on-chain account exists
+        const accountInfo = await program.provider.connection.getAccountInfo(nodePDA);
+        if (!accountInfo) {
+          throw new Error('Node account not found on-chain. Please re-activate.');
+        }
 
-      // Short pause so StakingPayment can show its success state
-      await new Promise((r) => setTimeout(r, 1200));
-      setView('dashboard');
-    } catch (err: unknown) {
-      setStakeError(err instanceof Error ? err.message : 'Staking failed. Please try again.');
-      throw err; // let StakingPayment reset its local phase
-    } finally {
-      setStaking(false);
-    }
-  }, [wallet]);
+        // 3. Convert UI amount → raw (9 decimals) for Anchor instruction
+        const amountRaw = new BN(amount).mul(new BN(TOKEN_DECIMALS));
 
+        // 4. Execute stakeTokens — user signs, transfers to staking_vault
+        const tx_signature = await stakeTokens(program, nodePDA, publicKey, amountRaw);
+
+        // 5. Wait for confirmation
+        const latestBlockhash = await program.provider.connection.getLatestBlockhash();
+        await program.provider.connection.confirmTransaction(
+          { signature: tx_signature, ...latestBlockhash },
+          'confirmed',
+        );
+
+        // 6. Tell backend: verify tx on-chain, flip is_validator = true
+        //    expected_amount is raw (9 decimals) to match what Solana returns
+        await validateStakePayment({
+          signature:       tx_signature,
+          expected_amount: amount * TOKEN_DECIMALS, // raw uint64
+          node_pda:        nodePDA.toBase58(),
+        });
+
+        // 7. Re-fetch fresh runner state from backend
+        const resp = await getRunnerMe(publicKey.toBase58());
+        if (resp.node) {
+          setRunner(resp.node);
+          setOffChainBalance(resp.node.offchain_accumulated_tokens);
+          setOnChainBalance(resp.node.total_earned_tokens_all_time);
+        }
+
+        setView('dashboard');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Staking failed.';
+        setStakeError(
+          msg.includes('3012')
+            ? 'Vault not initialized on-chain. Contact support.'
+            : msg,
+        );
+        throw err; // let StakingPayment reset its phase UI
+      } finally {
+        setStaking(false);
+      }
+    },
+    [publicKey, program, runner],
+  );
+
+  // ── HANDLER: claim ───────────────────────────────────────
   const handleClaim = useCallback(async () => {
     setClaimAlert(null);
     setClaimSuccess(null);
 
     if (offChainBalance < 10) {
       setClaimAlert(
-        'Milestone Constraint: Accumulate a minimum of 10.0 tokens off-chain before syncing to blockchain.',
+        'Milestone Constraint: Accumulate a minimum of 10.0 $UPT off-chain before syncing to blockchain.',
       );
       return;
     }
 
     setClaiming(true);
-    await new Promise((r) => setTimeout(r, 1_800));
+    try {
+      // TODO: wire to real claim API when ready
+      await new Promise((r) => setTimeout(r, 1_800));
 
-    const claimed    = 10;
-    const remainder  = parseFloat((offChainBalance % 10).toFixed(6));
-    const sig        = Array.from({ length: 64 }, () =>
-      Math.floor(Math.random() * 16).toString(16),
-    ).join('');
-    const ts = nowTs();
+      const claimed   = 1;
+      const remainder = parseFloat((offChainBalance % 10).toFixed(6));
+      const sig       = Array.from({ length: 64 }, () =>
+        Math.floor(Math.random() * 16).toString(16),
+      ).join('');
+      const ts = nowTs();
 
-    setOffChainBalance(remainder);
-    setOnChainBalance((p) => parseFloat((p + claimed).toFixed(4)));
+      setOffChainBalance(remainder);
+      setOnChainBalance((p) => parseFloat((p + claimed).toFixed(4)));
 
-    const tx: PendingTx = {
-      id:        `tx_${Math.random().toString(36).slice(2, 10)}`,
-      timestamp: ts,
-      amount:    claimed,
-      signature: sig,
-      status:    'confirmed',
-    };
-    setPendingTxs((p) => [tx, ...p]);
+      const tx: PendingTx = {
+        id:        `tx_${Math.random().toString(36).slice(2, 10)}`,
+        timestamp: ts,
+        amount:    claimed,
+        signature: sig,
+        status:    'confirmed',
+      };
+      setPendingTxs((p) => [tx, ...p]);
 
-    setTermLines((p) => [
-      ...p,
-      {
-        id:   Math.random().toString(36).slice(2),
-        text: `[${ts}] ANCHOR CPI: Claim(${claimed} $UPT) -> Wallet settled. Sig: ${sig.slice(0, 20)}... [CONFIRMED]`,
-        type: 'reward',
-      },
-    ]);
+      setTermLines((p) => [
+        ...p,
+        {
+          id:   Math.random().toString(36).slice(2),
+          text: `[${ts}] ANCHOR CPI: Claim(${claimed} $UPT) -> Wallet settled. Sig: ${sig.slice(0, 20)}... [CONFIRMED]`,
+          type: 'reward',
+        },
+      ]);
 
-    setClaimSuccess(`Claimed ${claimed} $UPT on-chain. Remainder ${remainder.toFixed(6)} $UPT retained off-chain.`);
-    setTimeout(() => setClaimSuccess(null), 6_000);
-    setClaiming(false);
+      setClaimSuccess(`Claimed ${claimed} $UPT on-chain. Remainder: ${remainder.toFixed(6)} $UPT.`);
+      setTimeout(() => setClaimSuccess(null), 6_000);
+    } finally {
+      setClaiming(false);
+    }
   }, [offChainBalance]);
 
+  // ── HANDLER: deposit / withdraw ──────────────────────────
   const handleDeposit = useCallback(async (amount: number) => {
+    // TODO: wire to real Solana deposit TX
     await new Promise((r) => setTimeout(r, 1_000));
     setOnChainBalance((p) => parseFloat((p + amount).toFixed(4)));
   }, []);
 
   const handleWithdraw = useCallback(async (amount: number) => {
+    // TODO: wire to real Solana withdraw TX
     await new Promise((r) => setTimeout(r, 1_000));
     setOnChainBalance((p) => parseFloat((p - amount).toFixed(4)));
   }, []);
 
-  // ── Render ─────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────
 
-  // Loading spinner
   if (view === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -261,17 +380,10 @@ export default function MinerNode() {
     );
   }
 
-  // No wallet
   if (view === 'no-wallet') {
-    return (
-      <WalletGate
-        connecting={connecting}
-        onConnect={connect}
-      />
-    );
+    return <WalletGate />;
   }
 
-  // Registration form
   if (view === 'register') {
     return (
       <div className="space-y-6 animate-fade-in-up">
@@ -281,15 +393,14 @@ export default function MinerNode() {
             style={{ color: 'var(--text-primary)' }}
           >
             <Cpu className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
-            Validator Setup — Step 1 of 2
+            Validator Setup — Step 1 of 3
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            No node found for this wallet. Register your node details first.
+            No node found for this wallet. Register your details first.
           </p>
         </div>
-
         <RegForm
-          ownerPubkey={wallet?.publicKey ?? ''}
+          ownerPubkey={publicKey!.toBase58()}
           registering={registering}
           error={regError}
           onRegister={handleRegister}
@@ -298,7 +409,30 @@ export default function MinerNode() {
     );
   }
 
-  // Staking / payment
+  if (view === 'activate') {
+    return (
+      <div className="space-y-6 animate-fade-in-up">
+        <div>
+          <h1
+            className="font-mono-data text-xl font-semibold flex items-center gap-2"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            <Cpu className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
+            Validator Setup — Step 2 of 3
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Initialize your node account on-chain.
+          </p>
+        </div>
+        <Activate
+          loading={activating}
+          error={activateError}
+          onActivate={handleActivate}
+        />
+      </div>
+    );
+  }
+
   if (view === 'stake') {
     return (
       <div className="space-y-6 animate-fade-in-up">
@@ -308,15 +442,14 @@ export default function MinerNode() {
             style={{ color: 'var(--text-primary)' }}
           >
             <Cpu className="w-5 h-5" style={{ color: 'var(--accent-blue)' }} />
-            Validator Setup — Step 2 of 2
+            Validator Setup — Step 3 of 3
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Node registered. Stake DPNG to activate your validator.
+            Stake DPNG tokens to activate your validator status.
           </p>
         </div>
-
         <StakingPayment
-          walletBalance={wallet?.balance ?? 0}
+          walletBalance={walletBalance}
           nodePubkey={runner?.node_pubkey ?? ''}
           staking={staking}
           error={stakeError}
@@ -326,15 +459,15 @@ export default function MinerNode() {
     );
   }
 
-  // Full dashboard
+  // ── Dashboard ───────────────────────────────────────────
   return (
     <Dashboard
       runner={runner!}
       wallet={{
-        publicKey: wallet?.publicKey ?? '',
-        balance:   wallet?.balance ?? 0,
-        network:   wallet?.network,
-        connected: wallet?.connected ?? false,
+        publicKey: publicKey?.toBase58() ?? '',
+        balance:   walletBalance,
+        network:   'mainnet-beta',
+        connected: connected,
       }}
       offChainBalance={offChainBalance}
       onChainBalance={onChainBalance}

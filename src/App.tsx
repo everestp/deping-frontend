@@ -15,6 +15,7 @@ import Settings from './pages/Settings';
 import Help from './pages/Help';
 import TelegramPage from './pages/TeleGramPage';
 
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // FIXED: Accessing 'loading' and 'loggedIn' from the auth-api hook
   const { loading, loggedIn } = useAuth();
@@ -44,6 +45,7 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+
       </Route>
 
       <Route

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Sun, Moon, Wallet, ChevronDown, LogOut, User, Zap } from 'lucide-react';
-// Import from the new Context wrapper
+import { Sun, Moon, ChevronDown, LogOut, User, Zap } from 'lucide-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+
 import { useAuth } from '../../context/AuthContext';
-import { useSolanaWallet } from '../../context/SolanaWallet';
 import { Button } from '../Common/Button';
 
+// Required for the WalletMultiButton styles
+import '@solana/wallet-adapter-react-ui/styles.css';
+
 export function Navbar() {
-  // Access variables exactly as they are named in the AuthContext/lib hook
   const { user, doLogout, loggedIn } = useAuth();
-  const { wallet, connecting, connect, disconnect, truncatedKey } = useSolanaWallet();
   const [isDark, setIsDark] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -50,24 +51,20 @@ export function Navbar() {
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* Wallet connect */}
+          {/* Wallet connect - Only visible when loggedIn */}
           {loggedIn && (
-            <>
-              {wallet.connected ? (
-                <button
-                  onClick={disconnect}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/8 text-sky-400 text-xs font-mono-data hover:bg-sky-500/15"
-                >
-                  <Wallet className="w-3.5 h-3.5" />
-                  {truncatedKey}
-                </button>
-              ) : (
-                <Button size="sm" variant="secondary" loading={connecting} onClick={connect} className="hidden sm:flex">
-                  <Wallet className="w-3.5 h-3.5" />
-                  Connect Wallet
-                </Button>
-              )}
-            </>
+            <div className="wallet-adapter-wrapper">
+              <WalletMultiButton
+                style={{
+                  background: "orange",
+                  color: "white",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  height: "36px",
+                  padding: "0 15px"
+                }}
+              />
+            </div>
           )}
 
           {/* User menu */}

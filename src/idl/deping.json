@@ -1,0 +1,120 @@
+{
+  "version": "0.1.0",
+  "name": "deping",
+  "metadata": {
+    "address": "EA4pKJ33F2p4oQyKNcCGMBptjSgbHQzCz2H8QgHbYAgR"
+  },
+  "instructions": [
+    {
+      "name": "initNode",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "emailHash", "type": { "array": ["u8", 32] } }]
+    },
+    {
+      "name": "addReward",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "backend", "isMut": false, "isSigner": true }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "claimReward",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": false, "isSigner": true },
+        { "name": "mint", "isMut": false, "isSigner": false },
+        { "name": "treasuryTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "treasuryAuthority", "isMut": false, "isSigner": false },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "buyProduct",
+      "accounts": [
+        { "name": "user", "isMut": false, "isSigner": true },
+        { "name": "mint", "isMut": false, "isSigner": false },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "treasuryTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "withdrawTreasury",
+      "accounts": [
+        { "name": "admin", "isMut": false, "isSigner": true },
+        { "name": "mint", "isMut": false, "isSigner": false },
+        { "name": "treasuryTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "treasuryAuthority", "isMut": false, "isSigner": false },
+        { "name": "adminTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "stakeTokens",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": false, "isSigner": true },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "stakingVault", "isMut": true, "isSigner": false },
+        { "name": "stakingVaultAuthority", "isMut": false, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "requestUnstake",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": false, "isSigner": true }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdrawStake",
+      "accounts": [
+        { "name": "nodeAccount", "isMut": true, "isSigner": false },
+        { "name": "owner", "isMut": false, "isSigner": true },
+        { "name": "stakingVault", "isMut": true, "isSigner": false },
+        { "name": "stakingVaultAuthority", "isMut": false, "isSigner": false },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "NodeAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "owner", "type": "publicKey" },
+          { "name": "emailHash", "type": { "array": ["u8", 32] } },
+          { "name": "rewardBalance", "type": "u64" },
+          { "name": "stakedAmount", "type": "u64" },
+          { "name": "unstakeRequestAt", "type": "i64" },
+          { "name": "isValidator", "type": "bool" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "Unauthorized", "msg": "Administrative or signature execution context unauthorized." },
+    { "code": 6001, "name": "InvalidAmount", "msg": "Provided transaction amount must be greater than zero." },
+    { "code": 6002, "name": "InsufficientFunds", "msg": "Requested withdrawal value exceeds verified on-chain node metrics balance." },
+    { "code": 6003, "name": "Overflow", "msg": "Mathematical calculation triggered an overflow/underflow state boundary." },
+    { "code": 6004, "name": "InsufficientStake", "msg": "Staking allocation size does not satisfy the network structural minimum." },
+    { "code": 6005, "name": "UnstakeCooldownActive", "msg": "Unstaking cooldown period remains active or has not been initiated." },
+    { "code": 6006, "name": "NotAuthorizedToUnstake", "msg": "Staking withdrawal request denied due to unverified cooldown sequences." }
+  ]
+}

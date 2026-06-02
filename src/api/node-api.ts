@@ -2,9 +2,14 @@
 // api/node-api.ts
 // ─────────────────────────────────────────────
 
-import type { RunnerNode, RegisterPayload } from '../types/miner';
+import type {
+  RunnerNode,
+  RegisterPayload,
+  MeResponse,
+  ValidateStakePayload,
+} from '../types/miner';
 
-const BASE = "http://localhost:8080";
+const BASE ="http://localhost:8080";
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem('auth_token') ?? '';
@@ -30,22 +35,22 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-// ── GET /api/v1/runner/me ────────────────────────────────────
-// Returns 404 ApiError when no runner exists for this pubkey
-export async function getRunnerMe(pubkey: string): Promise<RunnerNode> {
+// ── GET /api/v1/runner/me ─────────────────────────────────
+// Returns { view, node }
+// view: 'register' | 'activate' | 'stake' | 'dashboard'
+// node: null when view === 'register'
+export async function getRunnerMe(pubkey: string): Promise<MeResponse> {
   const res = await fetch(`${BASE}/api/v1/runner/me`, {
-    method: 'GET',
+    method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ pubkey }),
   });
-  return handleResponse<RunnerNode>(res);
+  return handleResponse<MeResponse>(res);
 }
 
-// ── POST /api/v1/runner/register ─────────────────────────────
-// Inserts runner with is_validator = false
-export async function registerRunner(
-  payload: RegisterPayload,
-): Promise<RunnerNode> {
+// ── POST /api/v1/runner/register ──────────────────────────
+// Creates DB row — node_pda = null, is_validator = false
+export async function registerRunner(payload: RegisterPayload): Promise<RunnerNode> {
   const res = await fetch(`${BASE}/api/v1/runner/register`, {
     method: 'POST',
     headers: authHeaders(),
@@ -54,22 +59,36 @@ export async function registerRunner(
   return handleResponse<RunnerNode>(res);
 }
 
-// ── POST /api/v1/payment/validate ────────────────────────────
-// Called after on-chain tx is confirmed.
-// Backend finds and verifies the tx, flips is_validator=true + staked_amount.
-export async function validateStakePayment(
-  amount: number,
-  tx_signature: string,
-): Promise<RunnerNode> {
-  const res = await fetch(`${BASE}/api/v1/payment/validate`, {
+// ── POST /api/v1/runner/activate ──────────────────────────
+// Called after initNode succeeds on-chain.
+// Saves the node_pda address to DB so /runner/me returns 'stake' next time.
+export async function activateNode(node_pda: string): Promise<RunnerNode> {
+  const res = await fetch(`${BASE}/api/v1/runner/activate`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ amount, tx_signature }),
+    body: JSON.stringify({ node_pda }),
   });
   return handleResponse<RunnerNode>(res);
 }
 
-// ── POST /api/v1/runner/heartbeat ────────────────────────────
+// ── POST /api/v1/payment/validate ─────────────────────────
+// Called after stakeTokens tx is confirmed on-chain.
+// Backend fetches tx from Solana by signature, verifies receiver + amount,
+// then flips is_validator = true and sets staked_amount.
+//
+// expected_amount is RAW (9 decimals): e.g. 20 DPNG = 20_000_000_000
+export async function validateStakePayment(
+  payload: ValidateStakePayload,
+): Promise<{ success: boolean; amount: number; receiver: string; timestamp: number }> {
+  const res = await fetch(`${BASE}/api/v1/payment/validate`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
+// ── POST /api/v1/runner/heartbeat ─────────────────────────
 // Fire-and-forget — keeps node marked as live
 export async function sendHeartbeat(nodePubkey: string): Promise<void> {
   try {
@@ -78,6 +97,6 @@ export async function sendHeartbeat(nodePubkey: string): Promise<void> {
       { method: 'POST', headers: authHeaders() },
     );
   } catch {
-    // best-effort, swallow silently
+    // best-effort
   }
 }
