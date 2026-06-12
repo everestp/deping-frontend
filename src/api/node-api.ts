@@ -9,7 +9,7 @@ import type {
   ValidateStakePayload,
 } from '../types/miner';
 
-const BASE ="http://localhost:8080";
+const BASE ="http://localhost:8081";
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem('auth_token') ?? '';

@@ -1,0 +1,23 @@
+// Approximate world node positions [longitude, latitude] for visualization
+export const nodeLocations: Array<{ id: string; coords: [number, number]; city: string }> = [
+  { id: "sfo", coords: [-122.4, 37.77], city: "San Francisco" },
+  { id: "nyc", coords: [-74, 40.7], city: "New York" },
+  { id: "lon", coords: [-0.12, 51.5], city: "London" },
+  { id: "ams", coords: [4.9, 52.37], city: "Amsterdam" },
+  { id: "fra", coords: [8.68, 50.11], city: "Frankfurt" },
+  { id: "sto", coords: [18.06, 59.33], city: "Stockholm" },
+  { id: "ist", coords: [28.98, 41.01], city: "Istanbul" },
+  { id: "dub", coords: [55.27, 25.2], city: "Dubai" },
+  { id: "mum", coords: [72.87, 19.07], city: "Mumbai" },
+  { id: "sin", coords: [103.8, 1.35], city: "Singapore" },
+  { id: "tok", coords: [139.69, 35.68], city: "Tokyo" },
+  { id: "syd", coords: [151.2, -33.86], city: "Sydney" },
+  { id: "sao", coords: [-46.63, -23.55], city: "São Paulo" },
+  { id: "cpt", coords: [18.42, -33.92], city: "Cape Town" },
+  { id: "lax", coords: [-118.24, 34.05], city: "Los Angeles" },
+  { id: "tor", coords: [-79.38, 43.65], city: "Toronto" },
+  { id: "sel", coords: [126.97, 37.56], city: "Seoul" },
+  { id: "ban", coords: [77.59, 12.97], city: "Bangalore" },
+  { id: "ber", coords: [13.4, 52.52], city: "Berlin" },
+  { id: "par", coords: [2.35, 48.85], city: "Paris" },
+];

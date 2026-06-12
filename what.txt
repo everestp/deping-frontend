@@ -1,0 +1,5 @@
+everest@everest:~/Pictures/dev/breezo_fronted$ node src/scripts/de.js 
+✅ Treasury Initialized!
+ATA Address: CrQNMFTgdLm7Ep3yaTQcJJynD76ZGvwt5nkzRg25z9Re
+Transaction: 47ddoJvVBuE36wikYx3fyde3e5KvqtGLVcAL5vTFnQJoRUU9Tec6PTax1r7dpsmeLEnSoCpFYDcDzC61Rs8C1Maj
+everest@everest:~/Pictures/dev/breezo_fronted$ 

@@ -1,6 +1,6 @@
 import type { ApiMonitor, ApiMonitorStats } from '../types/monitor';
 
-const BASE_URL = "http://localhost:8080";
+const BASE_URL = "http://localhost:8081";
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem('auth_token') ?? '';
