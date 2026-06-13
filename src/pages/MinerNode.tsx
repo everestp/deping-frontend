@@ -169,7 +169,7 @@ const handleWithdrawStake = async (amount: number): Promise<string> => {
   if (view === 'no-wallet') return <WalletGate />;
   if (view === 'register') return <RegForm ownerPubkey={publicKey!.toBase58()} registering={false} error={null} onRegister={async (p) => { setRunner(await registerRunner(p)); setView('activate'); }} />;
   if (view === 'activate') return <Activate loading={false} error={null} onActivate={async () => { await initNode(program!, runner!.owner_email, walletContext); setView('stake'); }} />;
-  if (view === 'stake') return <StakingPayment walletBalance={walletBalance} nodePubkey={runner?.node_pubkey ?? ''} staking={staking} error={stakeError} onStake={handleStake} />;
+  if (view === 'stake') return <StakingPayment walletBalance={walletBalance} nodePubkey={runner?.node_pubkey ?? ''} staking={staking} error={stakeError} onStake={handleAddStake} />;
 
   return (
     <Dashboard
