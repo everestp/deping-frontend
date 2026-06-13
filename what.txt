@@ -27,3 +27,22 @@ TREASURY: 2pp688Vidur6vTC8HQ2TQWvT6rnX1GcozgUtZxtPfwSv
 STAKING VAULT: 8VSKP7NGULZtsCxbqXBmL94VVzUEUtbSc4WuMRXCiKnq
 everest@everest:~/Pictures/dev/breezo_fronted$ ^C
 everest@everest:~/Pictures/dev/breezo_fronted$ 
+
+
+
+
+Actrivate Payload
+
+{node_pda: "7aWiQoCgYSeEM7kU29ULFjJan5PQhPQJFRMLY1FFQpf4"}
+node_pda
+: 
+"7aWiQoCgYSeEM7kU29ULFjJan5PQhPQJFRMLY1FFQpf4"
+
+
+  staking validate payload
+
+{
+    "signature": "HbiWqFxdRKu1iEREGBauPEidJaAA6F5GQCvu5UUZRq9HiNCBqznp992dTGqunzPnTp9EZ919VaeJvVFQ9FU5pNM",
+    "expected_amount": 21000000000,
+    "node_pda": "7aWiQoCgYSeEM7kU29ULFjJan5PQhPQJFRMLY1FFQpf4"
+}

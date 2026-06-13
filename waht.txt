@@ -377,3 +377,7 @@ func (h *Hub) Run() {
     }, look what data i gfet from websocket a do you undestand and  rember i havce map in fornentd leaflet map  look at it i will share froentd part soon
 if packet is missing turn that part grey if sown red and if status 200 green
 websocket is ony for map ok ad rember can you make something that uptime refresh basedf on check_intercal secong now tell me what you do not code directly
+
+
+
+
