@@ -2,26 +2,31 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::pubkey;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
-declare_id!("459NYCjd5CsfYwced46S3iMgXqg1uvkBv3yBSu3iHhtC");
+declare_id!("DVicVozhh4y38dA6iCzfPp2c4xj5Q29mJq6HgF5Eufiz");
 
 // ================================================================================================================
 //                                         GLOBAL PLATFORM CONSTANTS
 // ================================================================================================================
-
 pub const ADMIN_WALLET: Pubkey = pubkey!("J81HEGiTH1eJNPV9bvoHNEejCDxpz8GSVLUyciuuFmoy");
 pub const BACKEND_WALLET: Pubkey = pubkey!("2fxkwit97yvCRtFEaokiqgAb7tgSQLp8iXcburG6vh2H");
 pub const DEEPING_MINT: Pubkey = pubkey!("DPg3P2U4syj8eGL6rRqMqhUfDayxVunh7Fmcowwh6hsj");
 pub const MINIMUM_VALIDATOR_STAKE: u64 = 20_000_000_000; 
 pub const UNSTAKE_COOLDOWN_SECONDS: i64 = 604_800;
 
-// ================================================================================================================
+// ===============================================================================================================
 //                                        CONTEXT INJECTION MECHANICS
 // ================================================================================================================
 
 #[derive(Accounts)]
 #[instruction(email_hash: [u8; 32])]
 pub struct InitNode<'info> {
-    #[account(init, payer = owner, space = 8 + 32 + 32 + 8 + 8 + 8 + 1 + 1, seeds = [b"node", owner.key().as_ref(), &email_hash], bump)]
+    #[account(
+        init, 
+        payer = owner, 
+        space = 8 + 32 + 32 + 8 + 8 + 8 + 1 + 1, 
+        seeds = [b"node", owner.key().as_ref(), &email_hash], 
+        bump
+    )]
     pub node_account: Account<'info, NodeAccount>,
     #[account(mut)]
     pub owner: Signer<'info>,

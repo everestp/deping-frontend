@@ -1,26 +1,31 @@
 import { useMemo } from "react";
 import { AnchorProvider, Program, Idl } from "@coral-xyz/anchor";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
+import { PublicKey } from "@solana/web3.js";
 import idl from "../../idl/deping.json";
 
-// The address is often available in the IDL itself
 const PROGRAM_ID = idl.metadata.address;
 
 export const useProgram = () => {
   const { connection } = useConnection();
-  const wallet = useAnchorWallet(); // Use useAnchorWallet instead of useWallet
+  const wallet = useAnchorWallet(); 
 
   return useMemo(() => {
-    // If the wallet is not connected, useAnchorWallet returns undefined.
-    // We return null to indicate the program is not ready.
-    if (!wallet) return null;
+    // 🔥 THE FIX: Create a safe dummy fallback wallet structure 
+    // instead of returning null. This keeps the Program object initialized 
+    // for read-only actions and hot-swaps instantly when connected.
+    const activeWallet = wallet || {
+      publicKey: PublicKey.default,
+      signAllTransactions: async (txs: any) => txs,
+      signTransaction: async (tx: any) => tx,
+    };
 
     const provider = new AnchorProvider(
       connection,
-      wallet, // AnchorWallet is fully compatible with AnchorProvider
+      activeWallet, 
       { commitment: "confirmed" }
     );
 
     return new Program(idl as Idl, PROGRAM_ID, provider);
-  }, [connection, wallet]);
+  }, [connection, wallet]); // Re-runs instantly the moment useAnchorWallet updates
 };

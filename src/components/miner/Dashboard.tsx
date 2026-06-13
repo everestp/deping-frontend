@@ -59,9 +59,18 @@ export function Dashboard({
   const progressPct   = Math.min((cycleBalance / MILESTONE) * 100, 100).toFixed(1);
   const nearThreshold = offChainBalance >= MILESTONE;
 
+  // Safe layout extraction selectors to prevent edge-case undefined component crashes
+  const nodePubkeyDisplay = runner?.node_pubkey 
+    ? `${runner.node_pubkey.slice(0, 6)}...${runner.node_pubkey.slice(-6)}` 
+    : "Unregistered Node";
+
+  const walletPubkeyDisplay = wallet?.publicKey && wallet.connected
+    ? `${wallet.publicKey.slice(0, 6)}...${wallet.publicKey.slice(-6)}`
+    : "Disconnected";
+
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* ── Page header ───────────────────────────────── */}
+      {/* ── Page Header ───────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1
@@ -76,7 +85,7 @@ export function Dashboard({
           </p>
         </div>
 
-        {/* Node badge */}
+        {/* Node Badge Indicator */}
         <div
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg self-start sm:self-auto"
           style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)' }}
@@ -86,14 +95,14 @@ export function Dashboard({
             style={{ background: 'var(--accent-green)' }}
           />
           <span className="text-xs font-mono-data" style={{ color: 'var(--accent-green)' }}>
-            {runner.node_pubkey.slice(0, 6)}...{runner.node_pubkey.slice(-6)}
+            {nodePubkeyDisplay}
           </span>
         </div>
       </div>
 
-      {/* ── Dual balance cards ────────────────────────── */}
+      {/* ── Dual Balance Grid ────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Off-chain rewards */}
+        {/* Off-Chain Rewards Allocation */}
         <div
           className="glass rounded-2xl p-5"
           style={{ border: '1px solid rgba(56,189,248,0.15)' }}
@@ -111,7 +120,6 @@ export function Dashboard({
             </span>
           </div>
 
-          {/* Balance */}
           <div className="mb-4">
             <span className="font-mono-data text-3xl font-bold" style={{ color: 'var(--accent-blue)' }}>
               {offChainBalance.toFixed(6)}
@@ -119,7 +127,7 @@ export function Dashboard({
             <span className="font-mono-data text-sm ml-2" style={{ color: 'var(--text-muted)' }}>$UPT</span>
           </div>
 
-          {/* Milestone progress */}
+          {/* Milestone Sync Progress */}
           <div className="mb-2">
             <div className="flex items-center justify-between text-xs mb-1.5">
               <span style={{ color: 'var(--text-muted)' }}>10 Token Sync Milestone</span>
@@ -152,7 +160,7 @@ export function Dashboard({
             </div>
           </div>
 
-          {/* Claim alerts */}
+          {/* Operational Pipeline Alerts */}
           {claimAlert && (
             <div
               className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs font-mono-data animate-fade-in-up"
@@ -187,7 +195,7 @@ export function Dashboard({
           </Button>
         </div>
 
-        {/* On-chain settled balance */}
+        {/* On-Chain Settled Metrics Ledger Card */}
         <div
           className="glass rounded-2xl p-5"
           style={{ border: '1px solid rgba(52,211,153,0.15)' }}
@@ -214,14 +222,14 @@ export function Dashboard({
 
           <div className="space-y-2">
             {[
-              { label: 'Network',       value: wallet.connected ? `Solana ${wallet.network ?? 'devnet'}` : '—' },
-              { label: 'Wallet',        value: wallet.connected ? `${wallet.publicKey.slice(0,6)}...${wallet.publicKey.slice(-6)}` : '—' },
-              { label: 'SOL Balance',   value: wallet.connected ? `${wallet.balance.toFixed(4)} SOL` : '—' },
-              { label: 'Node Region',   value: runner.region },
-              { label: 'Staked',        value: `${runner.staked_amount.toFixed(2)} DPNG` },
-              { label: 'All-Time',      value: `${runner.total_earned_tokens_all_time.toFixed(4)} $UPT` },
-              { label: 'Claim Count',   value: String(pendingTxs.length) },
-              { label: 'Validator',     value: runner.is_validator ? '✓ Active' : '✗ Inactive' },
+              { label: 'Network',       value: wallet?.connected ? `Solana ${wallet.network ?? 'devnet'}` : '—' },
+              { label: 'Wallet',        value: walletPubkeyDisplay },
+              { label: 'SOL Balance',   value: wallet?.connected ? `${wallet.balance.toFixed(4)} SOL` : '—' },
+              { label: 'Node Region',   value: runner?.region || 'Unknown' },
+              { label: 'Staked',        value: `${(runner?.staked_amount || 0).toFixed(2)} DPNG` },
+              { label: 'All-Time',      value: `${(runner?.total_earned_tokens_all_time || 0).toFixed(4)} $UPT` },
+              { label: 'Claim Count',   value: String(pendingTxs?.length || 0) },
+              { label: 'Validator',     value: runner?.is_validator ? '✓ Active' : '✗ Inactive' },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between text-sm">
                 <span style={{ color: 'var(--text-muted)' }}>{label}</span>
@@ -232,18 +240,18 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* ── Bank + Ledger ─────────────────────────────── */}
+      {/* ── Bank Liquidity Panel + Transaction History Ledger ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <BankPanel
           onChainBalance={onChainBalance}
-          walletBalance={wallet.balance}
+          walletBalance={wallet?.balance || 0}
           onDeposit={onDeposit}
           onWithdraw={onWithdraw}
         />
         <ClaimLedger transactions={pendingTxs} />
       </div>
 
-      {/* ── Terminal feed ─────────────────────────────── */}
+      {/* ── Terminal Feed Stream Panel ────────────────── */}
       <TerminalFeed lines={termLines} />
     </div>
   );

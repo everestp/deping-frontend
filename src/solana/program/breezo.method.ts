@@ -1,158 +1,109 @@
+import { BN, Program } from "@coral-xyz/anchor";
+import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from "@solana/spl-token";
-import BN from "bn.js";
-import { sha256 } from 'js-sha256';
+import { sha256 } from "js-sha256";
 
 // =====================================================
-// CONFIG
+// GLOBAL SETUP
 // =====================================================
-const PROGRAM_ID = new PublicKey("EA4pKJ33F2p4oQyKNcCGMBptjSgbHQzCz2H8QgHbYAgR");
-const DEEPING_MINT = new PublicKey("2V5HdggYQXW1Z9nhrVKjNdYqg5NsQnZhwMERYr8WK1pU");
+const PROGRAM_ID = new PublicKey("DVicVozhh4y38dA6iCzfPp2c4xj5Q29mJq6HgF5Eufiz");
+const DEEPING_MINT = new PublicKey("DPg3P2U4syj8eGL6rRqMqhUfDayxVunh7Fmcowwh6hsj");
 
 // =====================================================
-// PDA HELPERS
+// UTILITY HELPERS (PDA & HASH)
 // =====================================================
-
-export const getTreasuryPDA = () =>
-  PublicKey.findProgramAddressSync([Buffer.from("treasury")], PROGRAM_ID)[0];
-
-export const getStakingVaultPDA = () =>
+export const getStakingVaultAuthority = () =>
   PublicKey.findProgramAddressSync([Buffer.from("staking_vault")], PROGRAM_ID)[0];
 
-export const getNodePDA = (ownerPubkey: PublicKey, emailHash: Uint8Array) =>
-  PublicKey.findProgramAddressSync(
-    [Buffer.from("node"), ownerPubkey.toBuffer(), emailHash],
-    PROGRAM_ID
-  )[0];
+export const getTreasuryAuthority = () =>
+  PublicKey.findProgramAddressSync([Buffer.from("treasury")], PROGRAM_ID)[0];
+
+export const getNodePDA = (owner: PublicKey, emailHash: Uint8Array) =>
+  PublicKey.findProgramAddressSync([Buffer.from("node"), owner.toBuffer(), emailHash], PROGRAM_ID)[0];
+
+export const getEmailHash = (email: string): Uint8Array =>
+  new Uint8Array(sha256.array(email.toLowerCase().trim()));
+
+/**
+ * Universal safe parser to pull the valid signing PublicKey from any adapter framework
+ */
+const parseWalletPubKey = (wallet: any): PublicKey => {
+  const pk = wallet?.publicKey || wallet?.adapter?.publicKey || wallet?.wallet?.adapter?.publicKey;
+  if (!pk) throw new Error("Wallet connection missing. Make sure your wallet is connected.");
+  return pk;
+};
 
 // =====================================================
-// INTERFACE: CLAIM REWARD
+// 🚀 ON-CHAIN METHODS (SIMPLIFIED & HARDENED)
 // =====================================================
-export const claimReward = async (
-  program: any,
-  nodeAccountAddress: PublicKey,
-  ownerPublicKey: PublicKey,
-  amount: BN
-) => {
-  const treasuryAuthority = getTreasuryPDA();
 
-  const treasuryTokenAccount = getAssociatedTokenAddressSync(
-    DEEPING_MINT,
-    treasuryAuthority,
-    true
-  );
-
-  const userTokenAccount = getAssociatedTokenAddressSync(
-    DEEPING_MINT,
-    ownerPublicKey
-  );
+/**
+ * INIT NODE — Registers and establishes the node data account on-chain
+ */
+export const initNode = async (program: Program<any>, email: string, wallet: any) => {
+  const owner = parseWalletPubKey(wallet);
+  const emailHash = getEmailHash(email);
+  const nodeAccount = getNodePDA(owner, emailHash);
 
   return await program.methods
-    .claimReward(amount)
+    .initNode(Array.from(emailHash))
     .accounts({
-      nodeAccount: nodeAccountAddress,
-      owner: ownerPublicKey,
-      mint: DEEPING_MINT,
-      treasuryTokenAccount,
-      treasuryAuthority,
-      userTokenAccount,
-      tokenProgram: TOKEN_PROGRAM_ID,
+      nodeAccount,
+      owner,
+      systemProgram: SystemProgram.programId,
     })
     .rpc();
 };
 
-// =====================================================
-// INTERFACE: STAKING
-// =====================================================
-export const getStakingVaultAuthority = (programId: PublicKey) => {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("staking_vault")],
-    programId
-  )[0];
-};
+/**
+ * STAKE TOKENS — Fully automated using Anchor's clean transaction engine
+ */
 export const stakeTokens = async (
-  program: any,
-  nodeAccountAddress: PublicKey,
-  ownerPublicKey: PublicKey,
-  amount: BN
+  program: Program<any>,
+  nodeAccount: PublicKey,
+  amount: BN,
+  wallet: any
 ) => {
-  // 1. Derive the PDA Authority (The "signer" seeds)
-  const stakingVaultAuthority = getStakingVaultAuthority(program.programId);
+  const owner = parseWalletPubKey(wallet);
+  const stakingVaultAuthority = getStakingVaultAuthority();
 
-  // 2. Derive the actual Token Account (The "container" for tokens)
-  // This must match the address created by your initialization script
-  const stakingVault = getAssociatedTokenAddressSync(
-    DEEPING_MINT,
-    stakingVaultAuthority,
-    true // allowOwnerOffCurve = true, because it's a PDA
-  );
+  // Derive Associated Token Accounts (ATAs) 
+  const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, owner);
+  const stakingVault = await getAssociatedTokenAddress(DEEPING_MINT, stakingVaultAuthority, true);
 
-  const userTokenAccount = getAssociatedTokenAddressSync(DEEPING_MINT, ownerPublicKey);
-
+  // Anchor's .rpc() pattern natively manages latest blockhashes, token account 
+  // auto-creation constraints via the IDL, fee configuration, and standard client prompts.
   return await program.methods
     .stakeTokens(amount)
     .accounts({
-      nodeAccount: nodeAccountAddress,
-      owner: ownerPublicKey,
-      userTokenAccount: userTokenAccount,
-      stakingVault: stakingVault,               // The Token Account (initialized)
-      stakingVaultAuthority: stakingVaultAuthority, // The PDA (the authority)
+      nodeAccount,
+      userTokenAccount,
+      stakingVault,
+      owner,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
     .rpc();
 };
 
-export const withdrawStake = async (
-  program: any,
-  nodeAccountAddress: PublicKey,
-  ownerPublicKey: PublicKey
-) => {
-  const stakingVault = getStakingVaultPDA();
-  const userTokenAccount = getAssociatedTokenAddressSync(DEEPING_MINT, ownerPublicKey);
+/**
+ * WITHDRAW STAKE — Recovers staked tokens from vault after cooldown cycles finish
+ */
+export const withdrawStake = async (program: Program<any>, nodeAccountAddress: PublicKey, wallet: any) => {
+  const owner = parseWalletPubKey(wallet);
+  const stakingVaultAuthority = getStakingVaultAuthority();
+
+  const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, owner);
+  const stakingVault = await getAssociatedTokenAddress(DEEPING_MINT, stakingVaultAuthority, true);
 
   return await program.methods
     .withdrawStake()
     .accounts({
       nodeAccount: nodeAccountAddress,
-      owner: ownerPublicKey,
-      stakingVault,
-      stakingVaultAuthority: stakingVault,
       userTokenAccount,
+      stakingVault,
+      stakingVaultAuthority,
+      owner,
       tokenProgram: TOKEN_PROGRAM_ID,
-    })
-    .rpc();
-};
-
-
-export const getEmailHash = (email: string): Uint8Array => {
-  // 1. MUST use the same normalization as your Go backend
-  const normalizedEmail = email.toLowerCase().trim();
-
-  // 2. Hash the normalized string
-  return new Uint8Array(sha256.array(normalizedEmail));
-};
-
-// =====================================================
-// INTERFACE: INIT NODE
-// =====================================================
-export const initNode = async (
-  program: any,
-  ownerPublicKey: PublicKey,
-  email: string
-) => {
-  const emailHash = getEmailHash(email);
-  const nodeAccount = getNodePDA(ownerPublicKey, emailHash);
-
-  // Note: The authority must be your Backend Hot Wallet signer
-  // This usually implies your backend calls this or the user provides
-  // the backend's signed transaction context.
-  return await program.methods
-    .initNode(Array.from(emailHash))
-    .accounts({
-      nodeAccount,
-      authority: program.provider.wallet.publicKey, // Must be BACKEND_WALLET
-      owner: ownerPublicKey,
-      systemProgram: SystemProgram.programId,
     })
     .rpc();
 };
