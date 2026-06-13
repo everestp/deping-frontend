@@ -11,7 +11,7 @@ import type {
   WsResultPacket,
 } from "../types/monitor";
 
-const WS_URL = "ws://localhost:8080/ws";
+const WS_URL = "ws://localhost:8081/ws";
 
 // ─── Interfaces ──────────────────────────────────────────────────────────────
 

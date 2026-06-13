@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// components/miner/Dashboard.tsx
+// components/miner/MinerDashboard.tsx
 // ─────────────────────────────────────────────
 
 import React from 'react';
@@ -31,6 +31,7 @@ interface DashboardProps {
   wallet: WalletInfo;
   offChainBalance: number;
   onChainBalance: number;
+  onChainRewardBalance:number;
   stakeBalance: number;
   pendingTxs: PendingTx[];
   termLines: TerminalLine[];
@@ -46,11 +47,12 @@ interface DashboardProps {
   validateUnstake: (payload: { signature: string; node_pda: string; amount: number }) => Promise<void>;
 }
 
-export function Dashboard({
+export function MinerDashboard({
 runner,
   wallet,
   offChainBalance,
   onChainBalance,
+  onChainRewardBalance,
   stakeBalance,
   pendingTxs,
   termLines,
@@ -198,7 +200,7 @@ runner,
             {claiming
               ? 'Syncing to blockchain...'
               : nearThreshold
-                ? 'Claim 10 $UPT On-Chain'
+                ? `Claim ${onChainRewardBalance} $UPT On-Chain`
                 : `Accumulating… (${offChainBalance.toFixed(2)} / ${MILESTONE})`}
           </Button>
         </div>

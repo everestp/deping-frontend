@@ -12,7 +12,7 @@ import { WalletGate } from '../components/miner/WalletGate';
 import { Activate } from '../components/miner/Activate';
 import { RegForm } from '../components/miner/RegForm';
 import { StakingPayment } from '../components/miner/StakingPayment';
-import { Dashboard } from '../components/miner/Dashboard';
+import { Dashboard, MinerDashboard } from '../components/miner/MinerDashBoard';
 
 import {
   getRunnerMe, registerRunner, activateNode,
@@ -207,10 +207,11 @@ export default function MinerNode() {
   if (view === 'stake') return <StakingPayment walletBalance={walletBalance} nodePubkey={runner?.node_pubkey ?? ''} staking={staking} error={stakeError} onStake={handleAddStake} />;
 
   return (
-    <Dashboard
+    <MinerDashboard
       runner={runner!}
       wallet={{ publicKey: publicKey?.toBase58() ?? '', balance: walletBalance, network: 'devnet', connected: true }}
       offChainBalance={offChainBalance}
+      onChainRewardBalance={onChainRewardBalance}
       onChainBalance={onChainRewardBalance} // 🌟 Correct parameter identifier matching the interface definition
       stakeBalance={stakeBalance}
       pendingTxs={pendingTxs}
