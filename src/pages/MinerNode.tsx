@@ -103,16 +103,31 @@ const refreshBalances = useCallback(async () => {
     return sig;
   };
 
-  const handleAddStake = async (amount: number): Promise<string> => {
-    const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
-const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS));
-    const sig = await addStake(program!, nodePDA, amountRaw, walletContext);
-    await connection.confirmTransaction(sig, 'confirmed');
-     await validateStakePayment({ signature: sig, expected_amount: Number(amountRaw), node_pda: nodePDA.toBase58() ,public_key:publicKey?.toBase58() });
-    refreshBalances();
-    return sig;
-  };
+const handleAddStake = async (amount: number): Promise<string> => {
+  const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
+  const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS));
+  
+  // 1. Send the transaction to the Solana network
+  const sig = await addStake(program!, nodePDA, amountRaw, walletContext);
+  
+  // 2. Wait for finalized confirmation status on the frontend client
+  await connection.confirmTransaction(sig, 'finalized');
 
+  // 🔥 3. THE 5-SECOND PROPAGATION DELAY 🔥
+  // Gives your Go backend RPC node plenty of time to fully index the transaction block!
+  await new Promise((resolve) => setTimeout(resolve, 25000));
+
+  // 4. Send the payload to the backend with the fixed BN-to-string transformation
+  await validateStakePayment({ 
+    signature: sig, 
+    expected_amount: Number(amountRaw.toString()), // ✅ Safely extracts the integer value as a number
+    node_pda: nodePDA.toBase58(), 
+    public_key: publicKey?.toBase58() 
+  });
+  
+  refreshBalances();
+  return sig;
+};
 const handleWithdrawStake = async (amount: number): Promise<string> => {
   const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
   // Convert UI number to BN
@@ -121,6 +136,14 @@ const handleWithdrawStake = async (amount: number): Promise<string> => {
   // Pass amountRaw to the function
   const sig = await withdrawStake(program!, nodePDA, amountRaw, walletContext);
   await connection.confirmTransaction(sig, 'confirmed');
+    await new Promise((resolve) => setTimeout(resolve, 25000));
+      await validateUnstakePayment({ 
+    signature: sig, 
+    expected_amount: Number(amountRaw.toString()), // ✅ Safely extracts the integer value as a number
+    node_pda: nodePDA.toBase58(), 
+    public_key: publicKey?.toBase58() 
+  });
+
   refreshBalances();
   return sig;
 };
@@ -129,7 +152,7 @@ const handleWithdrawStake = async (amount: number): Promise<string> => {
     const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
      const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS)); 
     const sig = await deleteAccount(program!, nodePDA, amountRaw, walletContext);
-    await connection.confirmTransaction(sig, 'confirmed');
+    await connection.confirmTransaction(sig, 'finalized');
     await validateUnstakePayment({ signature: sig, node_pda: nodePDA.toBase58(), expected_amount: Number(amountRaw) });
     refreshBalances();
     return sig;

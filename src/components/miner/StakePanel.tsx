@@ -22,8 +22,7 @@ export function StakePanel({
   nodePda,
   onStakeMore,
   onWithdrawStake,
-  onDeleteAccount,
-  validateUnstake
+  onDeleteAccount
 }: StakePanelProps) {
   const navigate = useNavigate();
   const [tab, setTab] = useState<ActionTab>('stake_more');
@@ -49,13 +48,12 @@ export function StakePanel({
         if (val > stakedAmount) throw new Error('Cannot withdraw more than your staked amount.');
         
         txSignature = await onWithdrawStake(val);
-        // Sync with your Web2 DB after successful chain TX
-        await validateUnstake({ signature: txSignature, node_pda: nodePda, amount: val });
+        // // Sync with your Web2 DB after successful chain TX
+        // await validateUnstake({ signature: txSignature, node_pda: nodePda, amount: val });
         setFeedback({ type: 'success', msg: `Withdrawal of ${val.toFixed(4)} DPNG successful.` });
       } 
       else if (tab === 'delete_account') {
         txSignature = await onDeleteAccount(stakedAmount);
-        await validateUnstake({ signature: txSignature, node_pda: nodePda, amount: stakedAmount });
         setFeedback({ type: 'success', msg: 'Account deleted. Redirecting...' });
         setTimeout(() => navigate('/'), 2000);
         return;
