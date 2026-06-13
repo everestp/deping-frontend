@@ -44,7 +44,7 @@ export interface AddCreditsPayload {
 
 // ── API Functions ────────────────────────────────────────────────────────
 export const initiateTelegramLink = (username: string) =>
-  apiFetch<LinkTelegramResponse>("/api/telegram/link", {
+  apiFetch<LinkTelegramResponse>("/api/v1/telegram/link", {
     method: "POST",
     body: JSON.stringify({ telegram_username: username }),
   });
@@ -53,13 +53,13 @@ export const fetchCreditStatus = () =>
   apiFetch<TelegramCreditStatus>("/api/telegram/credits");
 
 export const addPurchasedCredits = (payload: AddCreditsPayload) =>
-  apiFetch("/api/telegram/credits/add", {
+  apiFetch("/api/v1/telegram/credits/add", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 
 export const toggleMonitorNotification = (monitorId: string, enabled: boolean) =>
-  apiFetch(`/api/monitors/${monitorId}/notifications`, {
+  apiFetch(`/api/v1/monitors/${monitorId}/notifications`, {
     method: "PUT",
     body: JSON.stringify({ is_notifications_enabled: enabled }),
   });

@@ -98,7 +98,7 @@ const refreshBalances = useCallback(async () => {
     const amountRaw = new BN(amount).mul(new BN(TOKEN_DECIMALS));
     const sig = await stakeTokens(program!, nodePDA, amountRaw, walletContext);
     await connection.confirmTransaction(sig, 'confirmed');
-    await validateStakePayment({ signature: sig, expected_amount: Number(amountRaw), node_pda: nodePDA.toBase58() });
+    await validateStakePayment({ signature: sig, expected_amount: Number(amountRaw), node_pda: nodePDA.toBase58() ,public_key:publicKey?.toBase58() });
     refreshBalances();
     return sig;
   };
@@ -108,6 +108,7 @@ const refreshBalances = useCallback(async () => {
 const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS));
     const sig = await addStake(program!, nodePDA, amountRaw, walletContext);
     await connection.confirmTransaction(sig, 'confirmed');
+     await validateStakePayment({ signature: sig, expected_amount: Number(amountRaw), node_pda: nodePDA.toBase58() ,public_key:publicKey?.toBase58() });
     refreshBalances();
     return sig;
   };
@@ -129,7 +130,7 @@ const handleWithdrawStake = async (amount: number): Promise<string> => {
      const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS)); 
     const sig = await deleteAccount(program!, nodePDA, amountRaw, walletContext);
     await connection.confirmTransaction(sig, 'confirmed');
-    await validateUnstakePayment({ signature: sig, node_pda: nodePDA.toBase58(), amount: Number(amountRaw) });
+    await validateUnstakePayment({ signature: sig, node_pda: nodePDA.toBase58(), expected_amount: Number(amountRaw) });
     refreshBalances();
     return sig;
   };

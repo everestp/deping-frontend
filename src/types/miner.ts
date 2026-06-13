@@ -60,4 +60,10 @@ export interface ValidateStakePayload {
   signature: string;
   expected_amount: number;
   node_pda: string;
+  public_key?:string
+}
+export interface ActiveNode {
+  public_key: string;
+  node_pda:string
+ 
 }

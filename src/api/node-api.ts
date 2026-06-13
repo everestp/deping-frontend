@@ -7,6 +7,7 @@ import type {
   RegisterPayload,
   MeResponse,
   ValidateStakePayload,
+  ActiveNode,
 } from '../types/miner';
 
 const BASE = "http://localhost:8081";
@@ -56,11 +57,11 @@ export async function registerRunner(payload: RegisterPayload): Promise<RunnerNo
 }
 
 // ── POST /api/v1/runner/activate ──────────────────────────
-export async function activateNode(node_pda: string): Promise<RunnerNode> {
+export async function activateNode(payload:ActiveNode): Promise<RunnerNode> {
   const res = await fetch(`${BASE}/api/v1/runner/activate`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ node_pda }),
+    body: JSON.stringify(payload),
   });
   return handleResponse<RunnerNode>(res);
 }
@@ -69,7 +70,7 @@ export async function activateNode(node_pda: string): Promise<RunnerNode> {
 export async function validateStakePayment(
   payload: ValidateStakePayload,
 ): Promise<{ success: boolean; amount: number; receiver: string; timestamp: number }> {
-  const res = await fetch(`${BASE}/api/v1/payment/validate`, {
+  const res = await fetch(`${BASE}/api/v1/runner/stake`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -80,12 +81,8 @@ export async function validateStakePayment(
 // ── POST /api/v1/payment/validate-unstake ─────────────────
 // 🔥 FIXED: Directing to the dedicated off-chain unstake route
 // Flips is_validator = false, updates staked_amount to 0, maps signature log
-export async function validateUnstakePayment(payload: {
-  signature: string;
-  node_pda: string;
-  amount: number; // Raw base units (9 decimals)
-}): Promise<{ success: boolean; message: string; timestamp: number }> {
-  const res = await fetch(`${BASE}/api/v1/payment/validate-unstake`, {
+export async function validateUnstakePayment( payload: ValidateStakePayload,): Promise<{ success: boolean; message: string; timestamp: number }> {
+  const res = await fetch(`${BASE}/api/v1/runner/unstake`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
