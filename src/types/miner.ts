@@ -62,6 +62,11 @@ export interface ValidateStakePayload {
   node_pda: string;
   public_key?:string
 }
+export interface ValidateDeleteNodePayload {
+
+  node_pda: string;
+  public_key?:string
+}
 export interface ActiveNode {
   public_key: string;
   node_pda:string

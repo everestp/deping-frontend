@@ -17,6 +17,7 @@ import { Dashboard } from '../components/miner/Dashboard';
 import {
   getRunnerMe, registerRunner, activateNode,
   validateStakePayment, validateUnstakePayment, sendHeartbeat,
+  validateDelete,
 } from '../api/node-api';
 
 import { useProgram } from '../solana/program/anchor-provider';
@@ -153,7 +154,7 @@ const handleWithdrawStake = async (amount: number): Promise<string> => {
      const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS)); 
     const sig = await deleteAccount(program!, nodePDA, amountRaw, walletContext);
     await connection.confirmTransaction(sig, 'finalized');
-    await validateUnstakePayment({ signature: sig, node_pda: nodePDA.toBase58(), expected_amount: Number(amountRaw) });
+    await validateDelete({ node_pda:nodePDA.toBase58(),public_key:publicKey?.toBase58()});
     refreshBalances();
     return sig;
   };

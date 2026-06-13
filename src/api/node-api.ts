@@ -8,6 +8,7 @@ import type {
   MeResponse,
   ValidateStakePayload,
   ActiveNode,
+  ValidateDeleteNodePayload,
 } from '../types/miner';
 
 const BASE = "http://localhost:8081";
@@ -89,6 +90,15 @@ export async function validateUnstakePayment( payload: ValidateStakePayload,): P
   });
   return handleResponse(res);
 }
+export async function validateDelete( payload: ValidateDeleteNodePayload,): Promise<{ success: boolean; message: string; timestamp: number }> {
+  const res = await fetch(`${BASE}/api/v1/runner/delete`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
 
 // ── POST /api/v1/runner/heartbeat ─────────────────────────
 export async function sendHeartbeat(nodePubkey: string): Promise<void> {
