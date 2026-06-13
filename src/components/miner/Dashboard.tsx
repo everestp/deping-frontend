@@ -12,7 +12,7 @@ import {
   Cpu,
 } from 'lucide-react';
 import { Button } from '../Common/Button';
-import { BankPanel } from './BankPanel';
+import { StakePanel } from './StakePanel'; // 🔥 Imported your newly minted Staking Panel
 import { ClaimLedger } from './ClaimLedger';
 import { TerminalFeed } from './TerminalFeed';
 import type { RunnerNode, PendingTx, TerminalLine } from '../../types/miner';
@@ -31,29 +31,37 @@ interface DashboardProps {
   wallet: WalletInfo;
   offChainBalance: number;
   onChainBalance: number;
+  stakeBalance: number;
   pendingTxs: PendingTx[];
   termLines: TerminalLine[];
   claiming: boolean;
   claimAlert: string | null;
   claimSuccess: string | null;
   onClaim: () => Promise<void>;
-  onDeposit: (amount: number) => Promise<void>;
-  onWithdraw: (amount: number) => Promise<void>;
+  
+  // 🔥 Updated Action Hooks
+  onStakeMore: (amount: number) => Promise<string>;
+  onWithdrawStake: (amount: number) => Promise<string>;
+  onDeleteAccount: (amount: number) => Promise<string>;
+  validateUnstake: (payload: { signature: string; node_pda: string; amount: number }) => Promise<void>;
 }
 
 export function Dashboard({
-  runner,
+runner,
   wallet,
   offChainBalance,
   onChainBalance,
+  stakeBalance,
   pendingTxs,
   termLines,
   claiming,
   claimAlert,
   claimSuccess,
   onClaim,
-  onDeposit,
-  onWithdraw,
+  onStakeMore,
+  onWithdrawStake,
+  onDeleteAccount,
+  validateUnstake,
 }: DashboardProps) {
   const cycleBalance  = offChainBalance % MILESTONE;
   const progressPct   = Math.min((cycleBalance / MILESTONE) * 100, 100).toFixed(1);
@@ -85,24 +93,24 @@ export function Dashboard({
           </p>
         </div>
 
-        {/* Node Badge Indicator */}
+        {/* Node Status Badge Indicator */}
         <div
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg self-start sm:self-auto"
           style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)' }}
         >
           <span
             className="w-1.5 h-1.5 rounded-full animate-pulse-dot"
-            style={{ background: 'var(--accent-green)' }}
+            style={{ background: runner?.is_validator ? 'var(--accent-green)' : 'var(--accent-amber)' }}
           />
-          <span className="text-xs font-mono-data" style={{ color: 'var(--accent-green)' }}>
-            {nodePubkeyDisplay}
+          <span className="text-xs font-mono-data" style={{ color: runner?.is_validator ? 'var(--accent-green)' : 'var(--accent-amber)' }}>
+            {nodePubkeyDisplay} ({runner?.is_validator ? 'Active' : 'Staged'})
           </span>
         </div>
       </div>
 
-      {/* ── Dual Balance Grid ────────────────────────── */}
+      {/* ── Dual Balance Metrics Row ─────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Off-Chain Rewards Allocation */}
+        {/* Off-Chain Rewards Accumulator Card */}
         <div
           className="glass rounded-2xl p-5"
           style={{ border: '1px solid rgba(56,189,248,0.15)' }}
@@ -160,7 +168,7 @@ export function Dashboard({
             </div>
           </div>
 
-          {/* Operational Pipeline Alerts */}
+          {/* Operational Warnings / Status Success Alerts */}
           {claimAlert && (
             <div
               className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs font-mono-data animate-fade-in-up"
@@ -195,7 +203,7 @@ export function Dashboard({
           </Button>
         </div>
 
-        {/* On-Chain Settled Metrics Ledger Card */}
+        {/* On-Chain Settled Vault Configuration Panel */}
         <div
           className="glass rounded-2xl p-5"
           style={{ border: '1px solid rgba(52,211,153,0.15)' }}
@@ -223,13 +231,13 @@ export function Dashboard({
           <div className="space-y-2">
             {[
               { label: 'Network',       value: wallet?.connected ? `Solana ${wallet.network ?? 'devnet'}` : '—' },
-              { label: 'Wallet',        value: walletPubkeyDisplay },
+              { label: 'Wallet Address', value: walletPubkeyDisplay },
               { label: 'SOL Balance',   value: wallet?.connected ? `${wallet.balance.toFixed(4)} SOL` : '—' },
               { label: 'Node Region',   value: runner?.region || 'Unknown' },
-              { label: 'Staked',        value: `${(runner?.staked_amount || 0).toFixed(2)} DPNG` },
-              { label: 'All-Time',      value: `${(runner?.total_earned_tokens_all_time || 0).toFixed(4)} $UPT` },
+              { label: 'Total Staked',  value: `${(stakeBalance || 0).toFixed(2)} DPNG` },
+              { label: 'All-Time Earned', value: `${(runner?.total_earned_tokens_all_time || 0).toFixed(4)} $UPT` },
               { label: 'Claim Count',   value: String(pendingTxs?.length || 0) },
-              { label: 'Validator',     value: runner?.is_validator ? '✓ Active' : '✗ Inactive' },
+              { label: 'Validator Status', value: runner?.is_validator ? '✓ Active' : '✗ Inactive' },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between text-sm">
                 <span style={{ color: 'var(--text-muted)' }}>{label}</span>
@@ -240,18 +248,25 @@ export function Dashboard({
         </div>
       </div>
 
-      {/* ── Bank Liquidity Panel + Transaction History Ledger ── */}
+      {/* ── Controls Row: Staking Interface + Ledger ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <BankPanel
-          onChainBalance={onChainBalance}
+        {/* 🔥 SWITCHED OUT BankPanel FOR StakePanel AS REQUESTED */}
+      <StakePanel
+          stakedAmount={stakeBalance}
           walletBalance={wallet?.balance || 0}
-          onDeposit={onDeposit}
-          onWithdraw={onWithdraw}
+          nodePda={runner?.node_pda || ''}
+        
+          onStakeMore={onStakeMore}
+          onWithdrawStake={onWithdrawStake}
+          onDeleteAccount={onDeleteAccount}
+          validateUnstake={validateUnstake}
         />
+        
+        {/* Historical Claims Settlement Log */}
         <ClaimLedger transactions={pendingTxs} />
       </div>
 
-      {/* ── Terminal Feed Stream Panel ────────────────── */}
+      {/* ── Terminal Log Stream Panel ────────────────── */}
       <TerminalFeed lines={termLines} />
     </div>
   );

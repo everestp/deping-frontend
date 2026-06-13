@@ -15,7 +15,7 @@ interface StakingPaymentProps {
   nodePubkey: string;
   staking: boolean;
   error: string | null;
-  onStake: (amount: number) => Promise<void>;
+  onStake: (amount: number) => Promise<string>;
 }
 
 type Phase = "idle" | "signing" | "validating" | "done";

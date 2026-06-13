@@ -9,7 +9,7 @@ import type {
   ValidateStakePayload,
 } from '../types/miner';
 
-const BASE ="http://localhost:8081";
+const BASE = "http://localhost:8081";
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem('auth_token') ?? '';
@@ -36,9 +36,6 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 // ── GET /api/v1/runner/me ─────────────────────────────────
-// Returns { view, node }
-// view: 'register' | 'activate' | 'stake' | 'dashboard'
-// node: null when view === 'register'
 export async function getRunnerMe(pubkey: string): Promise<MeResponse> {
   const res = await fetch(`${BASE}/api/v1/runner/me`, {
     method: 'POST',
@@ -49,7 +46,6 @@ export async function getRunnerMe(pubkey: string): Promise<MeResponse> {
 }
 
 // ── POST /api/v1/runner/register ──────────────────────────
-// Creates DB row — node_pda = null, is_validator = false
 export async function registerRunner(payload: RegisterPayload): Promise<RunnerNode> {
   const res = await fetch(`${BASE}/api/v1/runner/register`, {
     method: 'POST',
@@ -60,8 +56,6 @@ export async function registerRunner(payload: RegisterPayload): Promise<RunnerNo
 }
 
 // ── POST /api/v1/runner/activate ──────────────────────────
-// Called after initNode succeeds on-chain.
-// Saves the node_pda address to DB so /runner/me returns 'stake' next time.
 export async function activateNode(node_pda: string): Promise<RunnerNode> {
   const res = await fetch(`${BASE}/api/v1/runner/activate`, {
     method: 'POST',
@@ -72,11 +66,6 @@ export async function activateNode(node_pda: string): Promise<RunnerNode> {
 }
 
 // ── POST /api/v1/payment/validate ─────────────────────────
-// Called after stakeTokens tx is confirmed on-chain.
-// Backend fetches tx from Solana by signature, verifies receiver + amount,
-// then flips is_validator = true and sets staked_amount.
-//
-// expected_amount is RAW (9 decimals): e.g. 20 DPNG = 20_000_000_000
 export async function validateStakePayment(
   payload: ValidateStakePayload,
 ): Promise<{ success: boolean; amount: number; receiver: string; timestamp: number }> {
@@ -88,8 +77,23 @@ export async function validateStakePayment(
   return handleResponse(res);
 }
 
+// ── POST /api/v1/payment/validate-unstake ─────────────────
+// 🔥 FIXED: Directing to the dedicated off-chain unstake route
+// Flips is_validator = false, updates staked_amount to 0, maps signature log
+export async function validateUnstakePayment(payload: {
+  signature: string;
+  node_pda: string;
+  amount: number; // Raw base units (9 decimals)
+}): Promise<{ success: boolean; message: string; timestamp: number }> {
+  const res = await fetch(`${BASE}/api/v1/payment/validate-unstake`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(res);
+}
+
 // ── POST /api/v1/runner/heartbeat ─────────────────────────
-// Fire-and-forget — keeps node marked as live
 export async function sendHeartbeat(nodePubkey: string): Promise<void> {
   try {
     await fetch(

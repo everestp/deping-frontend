@@ -88,7 +88,40 @@ export const stakeTokens = async (
 /**
  * WITHDRAW STAKE — Recovers staked tokens from vault after cooldown cycles finish
  */
-export const withdrawStake = async (program: Program<any>, nodeAccountAddress: PublicKey, wallet: any) => {
+export const withdrawStake = async (
+  program: Program<any>, 
+  nodeAccount: PublicKey, 
+  amount: BN, // 1. Add amount here!
+  wallet: any
+) => {
+  const owner = parseWalletPubKey(wallet);
+  const stakingVaultAuthority = getStakingVaultAuthority();
+  const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, owner);
+  const stakingVault = await getAssociatedTokenAddress(DEEPING_MINT, stakingVaultAuthority, true);
+
+  return await program.methods
+    .withdrawStake(amount) // 2. Pass amount here!
+    .accounts({
+      nodeAccount, // Matches 'node_account' in Rust
+      userTokenAccount,
+      stakingVault,
+      stakingVaultAuthority,
+      owner,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .rpc();
+};
+
+
+/**
+ * ADD STAKE — Top-up existing stake without needing a cooldown cycle
+ */
+export const addStake = async (
+  program: Program<any>,
+  nodeAccount: PublicKey,
+  amount: BN,
+  wallet: any
+) => {
   const owner = parseWalletPubKey(wallet);
   const stakingVaultAuthority = getStakingVaultAuthority();
 
@@ -96,14 +129,55 @@ export const withdrawStake = async (program: Program<any>, nodeAccountAddress: P
   const stakingVault = await getAssociatedTokenAddress(DEEPING_MINT, stakingVaultAuthority, true);
 
   return await program.methods
-    .withdrawStake()
+    .addStake(amount)
     .accounts({
-      nodeAccount: nodeAccountAddress,
+      nodeAccount,
       userTokenAccount,
       stakingVault,
+      owner,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .rpc();
+};
+
+/**
+ * DELETE ACCOUNT — Atomic exit: Returns tokens, wipes PDA data, returns rent
+ */
+export const deleteAccount = async (program: Program<any>, nodeAccount: PublicKey, amount: BN, wallet: any) => {
+  const owner = parseWalletPubKey(wallet);
+  const stakingVaultAuthority = getStakingVaultAuthority();
+  const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, owner);
+  const stakingVault = await getAssociatedTokenAddress(DEEPING_MINT, stakingVaultAuthority, true);
+
+  return await program.methods
+    .deleteAccount(amount) // Ensure amount is passed if your Rust expects it
+    .accounts({
+      nodeAccount,
+      stakingVault,
+      userTokenAccount,
       stakingVaultAuthority,
       owner,
       tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc();
+};
+
+/**
+ * ADD REWARD — Backend-only function to increment a node's reward balance
+ * Note: The signer must be the BACKEND_WALLET defined in your Rust constants
+ */
+export const addReward = async (
+  program: Program<any>,
+  nodeAccount: PublicKey,
+  amount: BN
+) => {
+  // This is typically called by your backend-managed wallet
+  return await program.methods
+    .addReward(amount)
+    .accounts({
+      nodeAccount,
+      signer: program.provider.publicKey, // Uses the provider's loaded wallet
     })
     .rpc();
 };
