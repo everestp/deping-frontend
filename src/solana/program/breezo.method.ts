@@ -181,3 +181,32 @@ export const addReward = async (
     })
     .rpc();
 };
+
+/**
+ * CLAIM REWARD — Transfers earned rewards from the treasury to the user's ATA
+ */
+export const claimReward = async (
+  program: Program<any>,
+  nodeAccount: PublicKey,
+  amount: BN,
+  wallet: any
+) => {
+  const owner = parseWalletPubKey(wallet);
+  const treasuryAuthority = getTreasuryAuthority();
+
+  const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, owner);
+  // Get the treasury's ATA (tracked under the treasury authority PDA)
+  const treasuryTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, treasuryAuthority, true);
+
+  return await program.methods
+    .claimReward(amount)
+    .accounts({
+      nodeAccount,
+      owner,
+      treasuryTokenAccount,
+      treasuryAuthority,
+      userTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .rpc();
+};

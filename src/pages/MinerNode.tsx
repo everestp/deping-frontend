@@ -23,7 +23,7 @@ import {
 import { useProgram } from '../solana/program/anchor-provider';
 import { 
   getEmailHash, getNodePDA, initNode, stakeTokens, 
-  withdrawStake, addStake, deleteAccount 
+  withdrawStake, addStake, deleteAccount, claimReward // 🌟 Ensure claimReward is explicitly imported here
 } from '../solana/program/breezo.method';
 import { useInterval } from '../hooks/useInterval';
 
@@ -41,51 +41,54 @@ export default function MinerNode() {
   const [view, setView] = useState<MinerView>('loading');
   const [runner, setRunner] = useState<RunnerNode | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
-   const [stakeBalance, setStakeBalance] = useState(0);
+  const [stakeBalance, setStakeBalance] = useState(0);
+  const [onChainRewardBalance, setOnChainRewardBalance] = useState(0);
   const [staking, setStaking] = useState(false);
   const [stakeError, setStakeError] = useState<string | null>(null);
   const [offChainBalance, setOffChainBalance] = useState(0);
-  const [onChainBalance, setOnChainBalance] = useState(0);
   const [pendingTxs, setPendingTxs] = useState<PendingTx[]>([]);
   const [termLines, setTermLines] = useState<TerminalLine[]>([]);
   const [claiming, setClaiming] = useState(false);
   const [claimAlert, setClaimAlert] = useState<string | null>(null);
   const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
 
-const refreshBalances = useCallback(async () => {
-  if (!publicKey || !program) return;
-  try {
-    // 1. Fetch Wallet Balance
-    const acc = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: DEEPING_MINT });
-    setWalletBalance(acc.value[0]?.account.data.parsed.info.tokenAmount.uiAmount ?? 0);
+  const refreshBalances = useCallback(async () => {
+    if (!publicKey || !program) return;
+    try {
+      // 1. Fetch Wallet Balance
+      const acc = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: DEEPING_MINT });
+      setWalletBalance(acc.value[0]?.account.data.parsed.info.tokenAmount.uiAmount ?? 0);
 
-    // 2. Fetch Runner/Node Info
-    const resp = await getRunnerMe(publicKey.toBase58());
-    
-    if (resp.node) {
-      setRunner(resp.node);
+      // 2. Fetch Runner/Node Info
+      const resp = await getRunnerMe(publicKey.toBase58());
       
-      // ✅ Update Off-Chain Rewards / Points
-      setOffChainBalance(resp.node.offchain_accumulated_tokens);
-      
-      // ✅ Fetch On-Chain Staked Amount directly from PDA
-      try {
-        const nodePDA = getNodePDA(publicKey, getEmailHash(resp.node.owner_email));
-        const accountData = await program.account.nodeAccount.fetch(nodePDA);
-        const readableStaked = new BN(accountData.stakedAmount).toNumber() / 1_000_000_000;
-        console.log("On-chain staked amount (raw):", accountData.stakedAmount.toString());
-        console.log("On-chain staked amount (readable):", readableStaked);
-        setStakeBalance(readableStaked);
-        setOnChainBalance(readableStaked);
-      } catch (e) {
-        console.warn("PDA fetch failed:", e);
+      if (resp.node) {
+        setRunner(resp.node);
+        
+        // Update Off-Chain Rewards / Points
+        setOffChainBalance(resp.node.offchain_accumulated_tokens);
+        
+        // Fetch On-Chain State directly from PDA
+        try {
+          const nodePDA = getNodePDA(publicKey, getEmailHash(resp.node.owner_email));
+          const accountData = await program.account.nodeAccount.fetch(nodePDA);
+          
+          const readableStaked = new BN(accountData.stakedAmount).toNumber() / TOKEN_DECIMALS;
+          const readableOnchainRewardBalance = new BN(accountData.rewardBalance).toNumber() / TOKEN_DECIMALS;
+          
+          console.log("On-chain reward balance (readable):", readableOnchainRewardBalance);
+          
+          setStakeBalance(readableStaked);
+          setOnChainRewardBalance(readableOnchainRewardBalance); // 🌟 Sets properties accurately for TypeScript layout satisfaction
+        } catch (e) {
+          console.warn("PDA fetch failed:", e);
+        }
       }
+      if (resp.view) setView(resp.view);
+    } catch (error) { 
+      setView('register'); 
     }
-    if (resp.view) setView(resp.view);
-  } catch (error) { 
-    setView('register'); 
-  }
-}, [publicKey, connection, program]);
+  }, [publicKey, connection, program]);
 
   useEffect(() => {
     if (!connected || !publicKey) { setView('no-wallet'); return; }
@@ -94,6 +97,43 @@ const refreshBalances = useCallback(async () => {
 
   // ── HANDLERS ─────────────────────────────────────────────
   
+  // 🌟 LIVE CLAIM ACTION: Handles full on-chain Anchor method call sequence
+  const handleClaimRewards = async () => {
+    if (!program || !publicKey || !runner) return;
+    
+    setClaiming(true);
+    setClaimAlert(null);
+    setClaimSuccess(null);
+
+    try {
+      const nodePDA = getNodePDA(publicKey, getEmailHash(runner.owner_email));
+      
+      // Re-fetch fresh account snapshot to secure precise raw token counts
+      const accountData = await program.account.nodeAccount.fetch(nodePDA);
+      const amountRaw = new BN(accountData.rewardBalance);
+
+      if (amountRaw.isZero()) {
+        setClaimAlert("No active on-chain rewards detected to finalize claim execution.");
+        setClaiming(false);
+        return;
+      }
+
+      // Execute on-chain smart contract settlement process
+      const sig = await claimReward(program, nodePDA, amountRaw, walletContext);
+      await connection.confirmTransaction(sig, 'confirmed');
+
+      setClaimSuccess(`Claim processed successfully! Signature: ${sig.slice(0, 8)}...`);
+      
+      // Refresh balance states to immediately update display counters
+      await refreshBalances();
+    } catch (err: any) {
+      console.error("Claim Transaction Execution Error:", err);
+      setClaimAlert(err?.message || "On-chain transaction execution failed.");
+    } finally {
+      setClaiming(false);
+    }
+  };
+
   const handleStake = async (amount: number): Promise<string> => {
     const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
     const amountRaw = new BN(amount).mul(new BN(TOKEN_DECIMALS));
@@ -104,54 +144,49 @@ const refreshBalances = useCallback(async () => {
     return sig;
   };
 
-const handleAddStake = async (amount: number): Promise<string> => {
-  const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
-  const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS));
-  
-  // 1. Send the transaction to the Solana network
-  const sig = await addStake(program!, nodePDA, amountRaw, walletContext);
-  
-  // 2. Wait for finalized confirmation status on the frontend client
-  await connection.confirmTransaction(sig, 'finalized');
+  const handleAddStake = async (amount: number): Promise<string> => {
+    const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
+    const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS));
+    
+    const sig = await addStake(program!, nodePDA, amountRaw, walletContext);
+    await connection.confirmTransaction(sig, 'finalized');
 
-  // 🔥 3. THE 5-SECOND PROPAGATION DELAY 🔥
-  // Gives your Go backend RPC node plenty of time to fully index the transaction block!
-  await new Promise((resolve) => setTimeout(resolve, 25000));
-
-  // 4. Send the payload to the backend with the fixed BN-to-string transformation
-  await validateStakePayment({ 
-    signature: sig, 
-    expected_amount: Number(amountRaw.toString()), // ✅ Safely extracts the integer value as a number
-    node_pda: nodePDA.toBase58(), 
-    public_key: publicKey?.toBase58() 
-  });
-  
-  refreshBalances();
-  return sig;
-};
-const handleWithdrawStake = async (amount: number): Promise<string> => {
-  const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
-  // Convert UI number to BN
-  const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS)); 
-
-  // Pass amountRaw to the function
-  const sig = await withdrawStake(program!, nodePDA, amountRaw, walletContext);
-  await connection.confirmTransaction(sig, 'confirmed');
+    // 25-second indexing allocation delay for backend sync engines
     await new Promise((resolve) => setTimeout(resolve, 25000));
-      await validateUnstakePayment({ 
-    signature: sig, 
-    expected_amount: Number(amountRaw.toString()), // ✅ Safely extracts the integer value as a number
-    node_pda: nodePDA.toBase58(), 
-    public_key: publicKey?.toBase58() 
-  });
 
-  refreshBalances();
-  return sig;
-};
+    await validateStakePayment({ 
+      signature: sig, 
+      expected_amount: Number(amountRaw.toString()), 
+      node_pda: nodePDA.toBase58(), 
+      public_key: publicKey?.toBase58() 
+    });
+    
+    refreshBalances();
+    return sig;
+  };
+
+  const handleWithdrawStake = async (amount: number): Promise<string> => {
+    const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
+    const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS)); 
+
+    const sig = await withdrawStake(program!, nodePDA, amountRaw, walletContext);
+    await connection.confirmTransaction(sig, 'confirmed');
+    
+    await new Promise((resolve) => setTimeout(resolve, 25000));
+    await validateUnstakePayment({ 
+      signature: sig, 
+      expected_amount: Number(amountRaw.toString()), 
+      node_pda: nodePDA.toBase58(), 
+      public_key: publicKey?.toBase58() 
+    });
+
+    refreshBalances();
+    return sig;
+  };
 
   const handleDeleteAccount = async (amount: number): Promise<string> => {
     const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
-     const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS)); 
+    const amountRaw = new BN(Math.round(amount * TOKEN_DECIMALS)); 
     const sig = await deleteAccount(program!, nodePDA, amountRaw, walletContext);
     await connection.confirmTransaction(sig, 'finalized');
     await validateDelete({ node_pda:nodePDA.toBase58(),public_key:publicKey?.toBase58()});
@@ -160,7 +195,7 @@ const handleWithdrawStake = async (amount: number): Promise<string> => {
   };
 
   const handleValidateUnstake = async (payload: { signature: string; node_pda: string; amount: number }) => {
-    await validateUnstakePayment({ ...payload, amount: Number(new BN(payload.amount).mul(new BN(TOKEN_DECIMALS))) });
+    await validateUnstakePayment({ ...payload, expected_amount: Number(new BN(payload.amount).mul(new BN(TOKEN_DECIMALS))) });
     refreshBalances();
   };
 
@@ -176,14 +211,14 @@ const handleWithdrawStake = async (amount: number): Promise<string> => {
       runner={runner!}
       wallet={{ publicKey: publicKey?.toBase58() ?? '', balance: walletBalance, network: 'devnet', connected: true }}
       offChainBalance={offChainBalance}
+      onChainBalance={onChainRewardBalance} // 🌟 Correct parameter identifier matching the interface definition
       stakeBalance={stakeBalance}
-      onChainBalance={onChainBalance}
       pendingTxs={pendingTxs}
       termLines={termLines}
       claiming={claiming}
       claimAlert={claimAlert}
       claimSuccess={claimSuccess}
-      onClaim={async () => {}}
+      onClaim={handleClaimRewards} // 🌟 Now correctly fires the real smart contract instruction hook
       onStakeMore={handleAddStake}
       onWithdrawStake={handleWithdrawStake}
       onDeleteAccount={handleDeleteAccount}

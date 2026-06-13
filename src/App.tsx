@@ -8,12 +8,13 @@ import { AppShell } from './components/Layout/AppShell';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Dashboard from './pages/Dashboard';
 import MonitorConfig from './pages/MonitorConfig';
 import MinerNode from './pages/MinerNode';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import TelegramPage from './pages/TeleGramPage';
+import Dashboard from './pages/Dashboard';
+
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
