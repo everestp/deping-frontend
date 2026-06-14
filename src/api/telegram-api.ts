@@ -66,6 +66,7 @@ export const toggleMonitorNotification = (monitorId: string, enabled: boolean) =
 
 // ── Hooks ────────────────────────────────────────────────────────────────
 import { useState, useEffect, useCallback } from "react";
+import { TelegramUser } from "../types/telegram";
 
 export function useCreditStatus() {
   const [data, setData] = useState<TelegramCreditStatus | null>(null);
@@ -89,3 +90,5 @@ export function useCreditStatus() {
 
   return { data, loading, error, refetch };
 }
+
+

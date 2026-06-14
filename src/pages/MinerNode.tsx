@@ -12,7 +12,7 @@ import { WalletGate } from '../components/miner/WalletGate';
 import { Activate } from '../components/miner/Activate';
 import { RegForm } from '../components/miner/RegForm';
 import { StakingPayment } from '../components/miner/StakingPayment';
-import { Dashboard, MinerDashboard } from '../components/miner/MinerDashBoard';
+import { MinerDashboard } from '../components/miner/MinerDashBoard';
 
 import {
   getRunnerMe, registerRunner, activateNode,

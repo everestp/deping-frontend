@@ -10,6 +10,7 @@ import type {
   ActiveNode,
   ValidateDeleteNodePayload,
 } from '../types/miner';
+import { TelegramUser } from '../types/telegram';
 
 const BASE = "http://localhost:8081";
 
@@ -110,4 +111,17 @@ export async function sendHeartbeat(nodePubkey: string): Promise<void> {
   } catch {
     // best-effort
   }
+}
+export interface ApiResponse {
+  success: boolean;
+  data: TelegramUser | null;
+}
+
+export async function fetchTelegramUserStatus(): Promise<ApiResponse>  {
+  const res = await fetch(`${BASE}/api/v1/telegram/me`, {
+    method: 'GET',
+    headers: authHeaders(),
+
+  });
+  return handleResponse(res);
 }
