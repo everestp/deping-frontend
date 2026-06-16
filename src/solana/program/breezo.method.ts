@@ -1,6 +1,6 @@
 import { BN, Program } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import { sha256 } from "js-sha256";
 
 // =====================================================
@@ -45,7 +45,7 @@ export const initNode = async (program: Program<any>, email: string, wallet: any
   const emailHash = getEmailHash(email);
   const nodeAccount = getNodePDA(owner, emailHash);
 
-  return await program.methods
+  const txSignature = await program.methods
     .initNode(Array.from(emailHash))
     .accounts({
       nodeAccount,
@@ -53,8 +53,13 @@ export const initNode = async (program: Program<any>, email: string, wallet: any
       systemProgram: SystemProgram.programId,
     })
     .rpc();
-};
 
+  return {
+    txSignature,
+    nodeAccount: nodeAccount.toBase58(), // Return as string
+    owner: owner.toBase58()             // Return as string
+  };
+};
 /**
  * STAKE TOKENS — Fully automated using Anchor's clean transaction engine
  */
@@ -189,14 +194,29 @@ export const claimReward = async (
   program: Program<any>,
   nodeAccount: PublicKey,
   amount: BN,
-  wallet: any
+  wallet: any,
+  connection: Connection  // add this
 ) => {
   const owner = parseWalletPubKey(wallet);
   const treasuryAuthority = getTreasuryAuthority();
-
   const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, owner);
-  // Get the treasury's ATA (tracked under the treasury authority PDA)
   const treasuryTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, treasuryAuthority, true);
+
+  // Guard: check treasury has enough before sending tx
+  try {
+    const { getAccount } = await import('@solana/spl-token');
+    const treasuryATA = await getAccount(connection, treasuryTokenAccount);
+    if (BigInt(amount.toString()) > treasuryATA.amount) {
+      throw new Error(
+        `Treasury underfunded. Has ${treasuryATA.amount}, ATA = ${treasuryATA.address} raw, needs ${amount.toString()} raw.`
+      );
+    }
+  } catch (e: any) {
+    if (e.name === 'TokenAccountNotFoundError') {
+      throw new Error('Treasury token account does not exist. Fund it first.');
+    }
+    throw e;
+  }
 
   return await program.methods
     .claimReward(amount)

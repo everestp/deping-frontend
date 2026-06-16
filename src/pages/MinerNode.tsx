@@ -27,7 +27,7 @@ import {
 } from '../solana/program/breezo.method';
 import { useInterval } from '../hooks/useInterval';
 
-import type { MinerView, RunnerNode, PendingTx, TerminalLine, RegisterPayload } from '../types/miner';
+import type { MinerView, RunnerNode, PendingTx, TerminalLine, RegisterPayload, ActiveNode } from '../types/miner';
 
 const DEEPING_MINT = new PublicKey("DPg3P2U4syj8eGL6rRqMqhUfDayxVunh7Fmcowwh6hsj");
 const TOKEN_DECIMALS = 1_000_000_000;
@@ -119,7 +119,7 @@ export default function MinerNode() {
       }
 
       // Execute on-chain smart contract settlement process
-      const sig = await claimReward(program, nodePDA, amountRaw, walletContext);
+      const sig = await claimReward(program, nodePDA, amountRaw, walletContext,connection);
       await connection.confirmTransaction(sig, 'confirmed');
 
       setClaimSuccess(`Claim processed successfully! Signature: ${sig.slice(0, 8)}...`);
@@ -134,15 +134,30 @@ export default function MinerNode() {
     }
   };
 
-  const handleStake = async (amount: number): Promise<string> => {
-    const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
-    const amountRaw = new BN(amount).mul(new BN(TOKEN_DECIMALS));
-    const sig = await stakeTokens(program!, nodePDA, amountRaw, walletContext);
-    await connection.confirmTransaction(sig, 'confirmed');
-    await validateStakePayment({ signature: sig, expected_amount: Number(amountRaw), node_pda: nodePDA.toBase58() ,public_key:publicKey?.toBase58() });
-    refreshBalances();
-    return sig;
+const handleActivate = async (): Promise<string> => {
+  // 1. Get the data from the blockchain transaction
+  // Ensure initNode is returning { txSignature, nodeAccount, owner }
+  const { txSignature, nodeAccount, owner } = await initNode(
+    program!, 
+    runner!.owner_email, 
+    walletContext
+  );
+
+  // 2. Prepare the payload correctly
+  const payload: ActiveNode = {
+    public_key: owner,      // Passing the wallet address string
+    node_pda: nodeAccount   // Passing the PDA address string
   };
+
+  // 3. Await the API call
+  await activateNode(payload);
+
+  // 4. Proceed
+  setView('stake');
+  
+  return txSignature;
+};
+
 
   const handleAddStake = async (amount: number): Promise<string> => {
     const nodePDA = getNodePDA(publicKey!, getEmailHash(runner!.owner_email));
@@ -203,7 +218,7 @@ export default function MinerNode() {
   if (view === 'loading') return <div className="flex justify-center p-10"><RefreshCw className="animate-spin" /></div>;
   if (view === 'no-wallet') return <WalletGate />;
   if (view === 'register') return <RegForm ownerPubkey={publicKey!.toBase58()} registering={false} error={null} onRegister={async (p) => { setRunner(await registerRunner(p)); setView('activate'); }} />;
-  if (view === 'activate') return <Activate loading={false} error={null} onActivate={async () => { await initNode(program!, runner!.owner_email, walletContext); setView('stake'); }} />;
+  if (view === 'activate') return <Activate loading={false} error={null} onActivate={handleActivate} />;
   if (view === 'stake') return <StakingPayment walletBalance={walletBalance} nodePubkey={runner?.node_pubkey ?? ''} staking={staking} error={stakeError} onStake={handleAddStake} />;
 
   return (
