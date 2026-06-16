@@ -1,27 +1,34 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
-  CheckCircle2,
   AlertCircle,
-  Send,
-  Coins,
-  Shield,
-  Loader2,
   Bell,
+  CheckCircle2,
+  Coins,
+  Globe,
+  Loader2,
   RefreshCw,
+  Send,
+  Shield,
   Sparkles,
-  Zap,
-  Globe
+  Zap
 } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { fetchTelegramUserStatus } from "../api/node-api";
 import {
-  initiateTelegramLink,
   addPurchasedCredits,
+  initiateTelegramLink,
   toggleMonitorNotification,
   useCreditStatus,
   type LinkTelegramResponse
 } from "../api/telegram-api";
-import { fetchTelegramUserStatus } from "../api/node-api";
+
+// 1. Core Solana & Anchor Context Imports
+import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
+import { BN } from "@coral-xyz/anchor";
+import { useProgram } from "../solana/program/anchor-provider"; // Using your verified custom hook
+import { buyProduct } from "../solana/program/breezo.method";     // Target programmatic method
 
 interface Monitor {
   id: string;
@@ -45,7 +52,15 @@ const PRICING_TIERS: PricingTier[] = [
   { id: "tier_gold", name: "Gold Ultimate", credits: 10000, cost: 700, unit: "DPNG", badge: "Best Rate (30% Off)", description: "Enterprise scale for large distributed network validation." },
 ];
 
+// Natively configure 9 decimal places matching your on-chain environment
+const TOKEN_DECIMALS = 1_000_000_000;
+
 export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }) {
+  // 2. Consume existing connection engines 
+  const { connection } = useConnection();
+  const walletContext = useAnchorWallet();
+  const program = useProgram();
+
   // ─── API State Management ──────────────────────────────────────────────────
   const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
   const [loadingUserData, setLoadingUserData] = useState(true);
@@ -61,19 +76,41 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
     monitors.reduce((acc, m) => ({ ...acc, [m.id]: m.is_notifications_enabled }), {})
   );
 
+  // ─── Time Reset Countdown State ──────────────────────────────────────────
+  const [hoursToReset, setHoursToReset] = useState<string>("--");
+
+  useEffect(() => {
+    if (!credits?.free_reset_date) return;
+
+    const calculateHoursLeft = () => {
+      const now = new Date().getTime();
+      const resetTime = new Date(credits.free_reset_date).getHours();
+      const difference = resetTime - now;
+
+      if (difference <= 0) {
+        setHoursToReset("0.0h");
+      } else {
+        const hours = (difference / (1000 * 60 * 60)).toFixed(1);
+        setHoursToReset(`${hours}h`);
+      }
+    };
+
+    calculateHoursLeft();
+    const interval = setInterval(calculateHoursLeft, 60000);
+
+    return () => clearInterval(interval);
+  }, [credits?.free_reset_date]);
+
   // ─── Parse Custom Go NullString JSON Response ──────────────────────────────
   useEffect(() => {
     async function loadStatus() {
       try {
         const response = await fetchTelegramUserStatus();
-        
-        // Ensure success state and check if TelegramUsername object reports validity
         if (response.success && response.data && response.data.TelegramUsername?.Valid) {
           const usernameStr = response.data.TelegramUsername.String;
           setTelegramUsername(usernameStr);
           setInputUsername(usernameStr || "");
         } else {
-          // Data is completely empty or NullString is invalid (nil equivalent)
           setTelegramUsername(null);
         }
       } catch (err) {
@@ -111,22 +148,68 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
     }
   }, [monitorToggles]);
 
+  // 🌟 UPDATED: Real On-Chain buy_product Checkout Process with 9-decimal precision
+// 🌟 Real On-Chain buy_product Checkout Process with hot-toasts and 3-second delay
   const handleBuyCredits = useCallback(async (tier: PricingTier) => {
+    if (!walletContext || !program) {
+      toast.error("Please link your Solana wallet to execute checkout transactions.");
+      return;
+    }
+
     setBuyingId(tier.id);
+    
+    // Initialize a loading toast to track the long-running execution pipeline
+    const toastId = toast.loading(`Initiating purchase for ${tier.name}...`);
+    
     try {
-      const signature = `sig_spl_${Math.random().toString(36).substring(2)}${Date.now()}`;
-      await addPurchasedCredits({ amount: tier.credits, tx_signature: signature });
+      // 1. Scale standard token pricing directly into raw u64 integers (9 decimals)
+      const amountRaw = new BN(Math.round(tier.cost * TOKEN_DECIMALS));
+      
+      console.log(`Executing product checkout: ${tier.name}. Target raw cost: ${amountRaw.toString()}`);
+
+      // 2. Call your imported Anchor method wrapper
+      toast.loading("Awaiting wallet signature...", { id: toastId });
+      const sig = await buyProduct(program, amountRaw, walletContext);
+      
+      // 3. Await commitment confirmation using your web3 connection instance
+      toast.loading("Confirming transaction on-chain...", { id: toastId });
+      await connection.confirmTransaction(sig, 'finalized');
+      console.log("On-chain transaction confirmed! Signature:", sig);
+
+      // ⏳ Strict 3-second allocation delay before triggering your API sync
+      toast.loading("Syncing with ledger tracking engines ...", { id: toastId });
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      toast.loading("Checking Blockchain Ledger ...", { id: toastId });
+
+      // 4. Submit confirmation details payload back to your database tracking APIs
+      await addPurchasedCredits({ 
+        expected_amount: tier.cost *TOKEN_DECIMALS, 
+        signature: sig ,
+        credit_balance:tier.credits
+      });
+      
+      // 5. Instantly force frontend balance indicator state panel refresh
       await refetchCredits();
-    } catch (e) {
-      console.error("Credit routing failure:", e);
+      
+      // 🎉 Turn the loading toast into a rich success toast
+      toast.success(`Successfully acquired ${tier.credits.toLocaleString()} tracking credits!`, { 
+        id: toastId,
+        duration: 5000 
+      });
+
+    } catch (e: any) {
+      console.error("On-chain Credit checkout routing failure:", e);
+      
+      // ❌ Turn the loading toast into an error toast
+      const errorMessage = e?.message || "Transaction signature or execution rejected.";
+      toast.error(`Checkout failed: ${errorMessage}`, { id: toastId });
     } finally {
       setBuyingId(null);
     }
-  }, [refetchCredits]);
+  }, [walletContext, program, connection, refetchCredits]);
 
   const activeTierObj = useMemo(() => PRICING_TIERS.find(t => t.id === selectedTier)!, [selectedTier]);
 
-  // Derived presence configurations (Ignoring internal verification flags entirely)
   const hasTelegramData = telegramUsername !== null && telegramUsername !== "";
   const displayUsername = telegramUsername || linkData?.bot_username || "Not Connected";
   const pendingCode = linkData?.verification_code || null;
@@ -180,9 +263,8 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
         {/* Left Section: Context Cards */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* Conditional Rendering Block Based Strictly on Data Availability */}
           {hasTelegramData ? (
-            <div className="p-6 bg-[var(--bg-card)] border border-emerald-500/20 rounded-2xl flex items-start gap-4">
+            <div className="p-6 bg-[var(--bg-card)] border border border-emerald-500/20 rounded-2xl flex items-start gap-4">
               <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
                 <Shield className="w-6 h-6" />
               </div>
@@ -277,9 +359,9 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
           </div>
         </div>
 
-        {/* Right Sidebar: Payments Modules */}
+        {/* Right Sidebar: Payments & Balances Module */}
         <div className="space-y-6">
-          <div className="p-6 bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl space-y-6">
+          <div className="p-6 bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-2xl space-y-4">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4 text-sky-400" />
@@ -289,12 +371,29 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingCredits ? "animate-spin" : ""}`} />
               </button>
             </div>
-            <div>
+            
+            {/* Structured Credit Breakdowns */}
+            <div className="space-y-3 font-mono border-b border-[var(--border-subtle)] pb-4">
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-mono font-bold tracking-tight">{credits?.total_credits_left ?? 0}</span>
-                <span className="text-xs font-mono text-[var(--text-muted)] uppercase">Credits</span>
+                <span className="text-4xl font-bold tracking-tight">{credits?.total_credits_left ?? 0}</span>
+                <span className="text-xs text-[var(--text-muted)] uppercase">Credits</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 text-[var(--text-secondary)]">
+                <div>
+                  <span className="text-[var(--text-muted)]">Free Left:</span> {credits?.free_credits_left ?? 0}
+                </div>
+                <div>
+                  <span className="text-[var(--text-muted)]">Used:</span> {credits?.free_credits_used ?? 0}
+                </div>
               </div>
             </div>
+
+            {/* <div className="flex items-center justify-between text-xs font-mono text-[var(--text-muted)]">
+              <span>Resets In:</span>
+              <span className="text-sky-400 font-semibold">{hoursToReset}</span>
+            </div> */}
+
             <div className="pt-2">
               <button onClick={() => handleBuyCredits(activeTierObj)} disabled={buyingId !== null} className="w-full py-2.5 bg-white text-black rounded-xl font-mono text-xs font-bold transition-colors flex items-center justify-center gap-2">
                 {buyingId === activeTierObj.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Coins className="w-3.5 h-3.5" />}

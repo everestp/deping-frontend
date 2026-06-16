@@ -38,8 +38,9 @@ export interface TelegramCreditStatus {
 }
 
 export interface AddCreditsPayload {
-  amount: number;
-  tx_signature: string;
+    signature: string;
+  expected_amount: number;
+  credit_balance:number,
 }
 
 // ── API Functions ────────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ export const initiateTelegramLink = (username: string) =>
   });
 
 export const fetchCreditStatus = () =>
-  apiFetch<TelegramCreditStatus>("/api/telegram/credits");
+  apiFetch<TelegramCreditStatus>("/api/v1/telegram/credits");
 
 export const addPurchasedCredits = (payload: AddCreditsPayload) =>
   apiFetch("/api/v1/telegram/credits/add", {

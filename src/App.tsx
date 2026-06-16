@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Help from './pages/Help';
 import TelegramPage from './pages/TeleGramPage';
 import Dashboard from './pages/Dashboard';
+import  { Toaster } from 'react-hot-toast';
 
 
 
@@ -71,6 +72,8 @@ function AppRoutes() {
 
 export default function App() {
   return (
+    <>
+    <Toaster />
     <BrowserRouter>
       <AuthProvider>
         <SolanaWalletProvider>
@@ -78,5 +81,6 @@ export default function App() {
         </SolanaWalletProvider>
       </AuthProvider>
     </BrowserRouter>
+    </>
   );
 }

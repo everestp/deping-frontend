@@ -60,6 +60,36 @@ export const initNode = async (program: Program<any>, email: string, wallet: any
     owner: owner.toBase58()             // Return as string
   };
 };
+
+/**
+ * BUY PRODUCT — Transfers tokens from the user's account directly to the platform treasury
+ */
+export const buyProduct = async (
+  program: Program<any>,
+  amount: BN,
+  wallet: any
+) => {
+  const user = parseWalletPubKey(wallet);
+  const treasuryAuthority = getTreasuryAuthority();
+
+  // Derive Associated Token Accounts (ATAs)
+  const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, user);
+  const treasuryTokenAccount = await getAssociatedTokenAddress(
+    DEEPING_MINT, 
+    treasuryAuthority, 
+    true // Allow owner to be a PDA
+  );
+
+  return await program.methods
+    .buyProduct(amount)
+    .accounts({
+      userTokenAccount,       // Matches 'user_token_account' in Rust
+      treasuryTokenAccount,   // Matches 'treasury_token_account' in Rust
+      user,                   // Matches 'user' Signer in Rust
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .rpc();
+};
 /**
  * STAKE TOKENS — Fully automated using Anchor's clean transaction engine
  */
