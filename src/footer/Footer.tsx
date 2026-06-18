@@ -29,7 +29,9 @@ export function Footer() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                 <Activity className="w-4 h-4 text-white" strokeWidth={2.5} />
               </div>
-              <span className="font-display font-bold text-lg">DePing</span>
+            <span className="font-mono-data font-bold text-lg text-[var(--text-primary)] tracking-tight">
+            deping.xyz
+          </span>
             </div>
             <p className="mt-4 text-sm text-muted-foreground max-w-xs">
               Decentralized uptime monitoring powered by a global network of real nodes, settled

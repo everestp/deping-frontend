@@ -43,7 +43,9 @@ export default function Login() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Zap className="w-6 h-6 text-sky-400" />
-            <span className="font-mono-data text-xl font-bold text-gradient-brand">deping.xyz</span>
+              <span className="font-mono-data font-bold text-lg text-[var(--text-primary)] tracking-tight">
+            deping.xyz
+          </span>
           </div>
           <h1 className="font-mono-data text-2xl font-semibold text-[var(--text-primary)]">
             Operator sign in

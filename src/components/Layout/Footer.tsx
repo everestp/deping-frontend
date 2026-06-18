@@ -10,7 +10,9 @@ export function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-sky-400" />
-            <span className="font-mono-data font-semibold text-gradient-brand">deping.xyz</span>
+              <span className="font-mono-data font-bold text-lg text-[var(--text-primary)] tracking-tight">
+            deping.xyz
+          </span>
             <span className="text-[var(--text-muted)] text-sm">
               — Decentralized Network Intelligence
             </span>
