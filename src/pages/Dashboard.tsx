@@ -603,7 +603,7 @@ useEffect(() => {
                         </td>
                         <td className="py-2 text-sky-400">{p.GeoRegion}</td>
                    
-                        <td className="py-2 text-right">{p.TotalUs}ms</td>
+                        <td className="py-2 text-right">{p.TcpUs}ms</td>
                         <td className={`py-2 text-right ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>{p.Success ? 'OK' : 'ERR'}</td>
                       </tr>
                     ))}
