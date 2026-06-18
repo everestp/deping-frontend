@@ -2,8 +2,8 @@
 // components/miner/TerminalFeed.tsx
 // ─────────────────────────────────────────────
 
-import React, { useRef, useEffect } from 'react';
 import { Cpu } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import type { TerminalLine } from '../../types/miner';
 
 interface TerminalFeedProps {

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Sun, Moon, ChevronDown, LogOut, User, Zap } from 'lucide-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { ChevronDown, LogOut, Moon, Sun, User, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../Common/Button';

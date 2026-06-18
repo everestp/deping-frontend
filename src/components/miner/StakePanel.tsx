@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { AlertCircle, CheckCircle, Coins, Lock, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Coins, AlertCircle, CheckCircle, ShieldAlert } from 'lucide-react';
 import { Button } from '../Common/Button';
 
 type ActionTab = 'stake_more' | 'withdraw_stake' | 'delete_account';

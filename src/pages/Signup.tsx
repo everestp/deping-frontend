@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { AlertCircle, CheckCircle, Eye, EyeOff, Lock, Mail, User, Wallet, Zap } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, Mail, Lock, User, Wallet, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../api/auth-api';
 import { Button } from '../components/Common/Button';
 import { Card } from '../components/Common/Card';

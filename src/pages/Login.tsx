@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { AlertCircle, Eye, EyeOff, Lock, Mail, Zap } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Common/Button';
 import { Card } from '../components/Common/Card';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   // Access doLogin from context (which comes from your auth-api hook)

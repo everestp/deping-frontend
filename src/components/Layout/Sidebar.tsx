@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Target,
-  Cpu,
-  ChevronLeft,
-  ChevronRight,
-  Activity,
-  Settings,
-  HelpCircle,
-  Send,
-  UserRound,
+    Activity,
+    ChevronLeft,
+    ChevronRight,
+    Cpu,
+    HelpCircle,
+    LayoutDashboard,
+    Send,
+    Settings,
+    Target,
+    UserRound,
 } from 'lucide-react';
+import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
 
 interface NavItem {
   to: string;

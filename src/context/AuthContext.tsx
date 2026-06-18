@@ -1,9 +1,9 @@
-import React, { createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
 import {
-  useAuth as useAuthHook,
-  UserInfo,
-  LoginPayload,
-  RegisterPayload
+    LoginPayload,
+    RegisterPayload,
+    useAuth as useAuthHook,
+    UserInfo
 } from '../api/auth-api';
 
 interface AuthContextType {

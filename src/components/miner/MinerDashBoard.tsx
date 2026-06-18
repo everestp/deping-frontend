@@ -2,23 +2,17 @@
 // components/miner/MinerDashboard.tsx
 // ─────────────────────────────────────────────
 
-import React, { useState } from 'react';
 import {
-  TrendingUp,
-  Database,
-  Zap,
-  AlertCircle,
-  CheckCircle,
-  Cpu,
-  Plus,
-  ArrowDown,
-  Trash2,
-  Terminal,
+    AlertCircle,
+    CheckCircle,
+    Cpu,
+    Database,
+    TrendingUp,
+    Zap
 } from 'lucide-react';
+import { useState } from 'react';
+import type { PendingTx, RunnerNode, TerminalLine } from '../../types/miner';
 import { Button } from '../Common/Button';
-import { ClaimLedger } from './ClaimLedger';
-import { TerminalFeed } from './TerminalFeed';
-import type { RunnerNode, PendingTx, TerminalLine } from '../../types/miner';
 import { StakePanel } from './StakePanel';
 
 const MILESTONE = 10;

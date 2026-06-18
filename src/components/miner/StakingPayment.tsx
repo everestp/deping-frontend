@@ -1,11 +1,11 @@
-import React, { useState } from "react";
 import {
-  Coins,
-  AlertCircle,
-  CheckCircle,
-  ChevronRight,
-  ShieldCheck,
+    AlertCircle,
+    CheckCircle,
+    ChevronRight,
+    Coins,
+    ShieldCheck,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../Common/Button";
 
 const MIN_STAKE = 20;

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, RefreshCw, Pause, Play, Power, X, Zap } from 'lucide-react';
-import { Card } from '../components/Common/Card';
+import { Pause, Play, Plus, RefreshCw, Trash2, X, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { createMonitor, deleteMonitor, fetchMonitors, toggleMonitorStatus } from '../api/monitor-api';
 import { Button } from '../components/Common/Button';
-import { fetchMonitors, deleteMonitor, toggleMonitorStatus, createMonitor } from '../api/monitor-api';
+import { Card } from '../components/Common/Card';
 
 export default function MonitorConfig() {
   const [monitors, setMonitors] = useState<any[]>([]);

@@ -2,10 +2,10 @@
 // components/miner/RegForm.tsx
 // ─────────────────────────────────────────────
 
-import React, { useState } from 'react';
-import { Cpu, Key, MapPin, Globe, AlertCircle, ShieldCheck } from 'lucide-react';
-import { Button } from '../Common/Button';
+import { AlertCircle, Cpu, Globe, Key, MapPin, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
 import type { RegisterPayload } from '../../types/miner';
+import { Button } from '../Common/Button';
 
 const COUNTRIES = [
   'Afghanistan','Albania','Algeria','Argentina','Australia','Austria',

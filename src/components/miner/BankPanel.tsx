@@ -2,8 +2,8 @@
 // components/miner/BankPanel.tsx
 // ─────────────────────────────────────────────
 
-import React, { useState } from 'react';
-import { Database, ArrowDownToLine, ArrowUpFromLine, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, CheckCircle, Database, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '../Common/Button';
 
 type Tab = 'deposit' | 'withdraw';

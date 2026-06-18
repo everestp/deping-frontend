@@ -2,7 +2,7 @@
 // // pages/MinerNode.tsx
 // // ─────────────────────────────────────────────
 
-// import React, { useState, useEffect, useCallback } from 'react';
+// import { useState, useEffect, useCallback } from 'react';
 // import { RefreshCw, Cpu } from 'lucide-react';
 // import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 // import { PublicKey } from '@solana/web3.js';
