@@ -11,7 +11,7 @@ import '@solana/wallet-adapter-react-ui/styles.css';
 
 export function Navbar() {
   const { user, doLogout, loggedIn } = useAuth();
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
