@@ -74,7 +74,7 @@ const NODES: Node[] = [
   { id: "worker", label: "Go worker pool",        tech: "consensus · fraud detection", desc: "Processes monitoring results, triggers rewards",  x: 688, y: 220, w: 176, h: 90,  layer: "green" },
   { id: "pg",     label: "PostgreSQL",            tech: "metrics · uptime · balances", desc: "Persistent storage for all metrics",              x: 688, y: 396, w: 176, h: 84,  layer: "green" },
   { id: "sync",   label: "Solana sync handler",   tech: "settlement engine · RPC",     desc: "Triggers on-chain reward transactions",           x: 688, y: 548, w: 176, h: 84,  layer: "green" },
-  { id: "sol",    label: "Solana mainnet",        tech: "PoH · RPC",                   desc: "On-chain settlement layer",                       x: 908, y: 56,  w: 136, h: 84,  layer: "red" },
+  { id: "sol",    label: "Solana Devnet",        tech: "PoH · RPC",                   desc: "On-chain settlement layer",                       x: 908, y: 56,  w: 136, h: 84,  layer: "red" },
   { id: "anchor", label: "Anchor program",        tech: "SPL · reward distribution",   desc: "Distributes miner SPL rewards",                   x: 908, y: 200, w: 136, h: 84,  layer: "red" },
   { id: "tbot",   label: "Telegram bot service",  tech: "consumer · dedup · rate-limit", desc: "DOWN alerts, latency spikes, real-time delivery", x: 908, y: 372, w: 136, h: 90, layer: "yellow" },
   { id: "tapi",   label: "Telegram Bot API",      tech: "sendMessage endpoint",        desc: "Real-time alert delivery to operators",           x: 1080, y: 468, w: 156, h: 84, layer: "yellow" },
