@@ -27,7 +27,7 @@ import {
 } from '../solana/program/breezo.method';
 
 import type { MinerView, RunnerNode, PendingTx, TerminalLine, ActiveNode } from '../types/miner';
-import { NodeAccount } from '../types/deping';
+
 
 
 const DEEPING_MINT = new PublicKey("DPg3P2U4syj8eGL6rRqMqhUfDayxVunh7Fmcowwh6hsj");
@@ -53,7 +53,15 @@ export default function MinerNode() {
   const [claiming, setClaiming] = useState(false);
   const [claimAlert, setClaimAlert] = useState<string | null>(null);
   const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
-  
+   interface NodeAccount {
+  owner: PublicKey;
+  emailHash: number[];
+  rewardBalance: BN;
+  stakedAmount: BN;
+  unstakeRequestAt: BN;
+  isValidator: boolean;
+  bump: number;
+}
 
 const refreshBalances = useCallback(async () => {
   if (!publicKey || !program) return;
@@ -68,20 +76,18 @@ const refreshBalances = useCallback(async () => {
       setOffChainBalance(resp.node.offchain_accumulated_tokens);
       
       try {
-        const nodePDA = getNodePDA(publicKey, getEmailHash(resp.node.owner_email));
-        
-        // Use IdlAccounts to map the data to your NodeAccount type from the IDL
-        
-        const accountData = (await program.account.nodeAccount.fetch(nodePDA)) 
-        
-        const divisor = new BN(TOKEN_DECIMALS);
-        
-        // Now accountData.stakedAmount is recognized as a BN automatically
-        const readableStaked = accountData.stakedAmount.div(divisor).toNumber();
-        const readableOnchainRewardBalance = accountData.rewardBalance.div(divisor).toNumber();
-        
-        setStakeBalance(readableStaked);
-        setOnChainRewardBalance(readableOnchainRewardBalance);
+      const nodePDA = getNodePDA(publicKey, getEmailHash(resp.node.owner_email));
+
+// Explicitly tell TS this is a NodeAccount
+const accountData = (await program.account.nodeAccount.fetch(nodePDA)) as unknown as NodeAccount;
+const divisor = new BN(TOKEN_DECIMALS);
+
+// Now TypeScript knows these fields exist because of the 'as NodeAccount' cast
+const readableStaked = accountData.stakedAmount.div(divisor).toNumber();
+const readableOnchainRewardBalance = accountData.rewardBalance.div(divisor).toNumber();
+
+setStakeBalance(readableStaked);
+setOnChainRewardBalance(readableOnchainRewardBalance);
       } catch (e) {
         console.warn("PDA fetch failed:", e);
       }
