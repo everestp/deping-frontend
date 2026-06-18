@@ -2,7 +2,7 @@
 // components/miner/ClaimLedger.tsx
 // ─────────────────────────────────────────────
 
-import React from 'react';
+
 import { History } from 'lucide-react';
 import type { PendingTx } from '../../types/miner';
 

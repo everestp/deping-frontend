@@ -1,20 +1,20 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { SolanaWalletProvider } from './context/SolanaWallet';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { PublicShell } from './components/Layout/PublicShell';
-import { AppShell } from './components/Layout/AppShell';
 
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AppShell } from './components/Layout/AppShell';
+import { PublicShell } from './components/Layout/PublicShell';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { SolanaWalletProvider } from './context/SolanaWallet';
+
+import { Toaster } from 'react-hot-toast';
+import Dashboard from './pages/Dashboard';
+import Help from './pages/Help';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
-import MonitorConfig from './pages/MonitorConfig';
 import MinerNode from './pages/MinerNode';
+import MonitorConfig from './pages/MonitorConfig';
 import Settings from './pages/Settings';
-import Help from './pages/Help';
+import Signup from './pages/Signup';
 import TelegramPage from './pages/TeleGramPage';
-import Dashboard from './pages/Dashboard';
-import  { Toaster } from 'react-hot-toast';
 import UserDashboard from './pages/UserDashBoard';
 
 

@@ -47,11 +47,10 @@ export function MinerDashboard({
   runner,
   wallet,
   offChainBalance,
-  onChainBalance,
+  
   onChainRewardBalance,
   stakeBalance,
-  pendingTxs,
-  termLines,
+  
   claiming,
   claimAlert,
   claimSuccess,
@@ -61,11 +60,12 @@ export function MinerDashboard({
   onDeleteAccount,
   validateUnstake,
 }: DashboardProps) {
-  const [stakeAmt, setStakeAmt] = useState('');
-  const [unstakeAmt, setUnstakeAmt] = useState('');
-  const [stakeLoading, setStakeLoading] = useState(false);
-  const [unstakeLoading, setUnstakeLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  // const [stakeAmt, setStakeAmt] = useState('');
+  // const [unstakeAmt, setUnstakeAmt] = useState('');
+  // const [stakeLoading, setStakeLoading] = useState(false);
+  // const [unstakeLoading, setUnstakeLoading] = useState(false);
+  // const [deleteLoading, setDeleteLoading] = useState(false);
+
 
   const cycleBalance = offChainBalance % MILESTONE;
   const progressPct = Math.min((cycleBalance / MILESTONE) * 100, 100);
@@ -79,24 +79,9 @@ export function MinerDashboard({
       ? `${wallet.publicKey.slice(0, 6)}...${wallet.publicKey.slice(-6)}`
       : '—';
 
-  const handleStake = async () => {
-    const amt = parseFloat(stakeAmt);
-    if (!amt || amt <= 0) return;
-    setStakeLoading(true);
-    try { await onStakeMore(amt); setStakeAmt(''); } finally { setStakeLoading(false); }
-  };
 
-  const handleUnstake = async () => {
-    const amt = parseFloat(unstakeAmt);
-    if (!amt || amt <= 0) return;
-    setUnstakeLoading(true);
-    try { await onWithdrawStake(amt); setUnstakeAmt(''); } finally { setUnstakeLoading(false); }
-  };
+ 
 
-  const handleDelete = async () => {
-    setDeleteLoading(true);
-    try { await onDeleteAccount(stakeBalance); } finally { setDeleteLoading(false); }
-  };
 
   return (
     <div className="space-y-5 animate-fade-in-up">

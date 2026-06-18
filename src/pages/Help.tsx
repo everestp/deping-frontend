@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { HelpCircle } from 'lucide-react';
 import { Card } from '../components/Common/Card';
 

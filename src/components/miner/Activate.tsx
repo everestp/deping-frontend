@@ -2,7 +2,7 @@
 // components/miner/Activate.tsx
 // ─────────────────────────────────────────────
 
-import React from 'react';
+
 import { ShieldCheck, Zap } from 'lucide-react';
 import { Button } from '../Common/Button';
 

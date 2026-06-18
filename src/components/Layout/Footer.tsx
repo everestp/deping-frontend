@@ -1,5 +1,5 @@
-import React from 'react';
-import { Zap, Github, Twitter, ExternalLink } from 'lucide-react';
+
+import { ExternalLink, Github, Twitter, Zap } from 'lucide-react';
 
 export function Footer() {
   const year = new Date().getFullYear();

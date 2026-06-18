@@ -2,9 +2,9 @@
 // components/miner/WalletGate.tsx
 // ─────────────────────────────────────────────
 
-import React from 'react';
-import { Wallet, Zap, Shield, TrendingUp } from 'lucide-react';
+
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { Shield, TrendingUp, Wallet, Zap } from 'lucide-react';
 
 export function WalletGate() {
   return (

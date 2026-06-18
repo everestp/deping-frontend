@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle, AlertCircle, Clock } from 'lucide-react';
+
+import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
 
 export interface LogEntry {
   id: string;
