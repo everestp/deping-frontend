@@ -16,6 +16,7 @@ import Settings from './pages/Settings';
 import Signup from './pages/Signup';
 import TelegramPage from './pages/TeleGramPage';
 import UserDashboard from './pages/UserDashBoard';
+import Docs from './pages/Docs';
 
 
 
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+          <Route path="/docs" element={<Docs />} />
 
       </Route>
 
@@ -63,6 +65,7 @@ function AppRoutes() {
          <Route path="/monitor-credit" element={<UserDashboard />} />
         <Route path="/miner" element={<MinerNode />} />
         <Route path="/telegram" element={<TelegramPage />} />
+        
         <Route path="/settings" element={<Settings />} />
         <Route path="/help" element={<Help />} />
       </Route>
