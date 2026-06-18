@@ -355,7 +355,7 @@ function H3({ children }: { children: React.ReactNode }) {
         marginTop: "1.6rem",
         marginBottom: "0.6rem",
         fontFamily: "var(--font-display)",
-        fontFamily: "var(--font-mono)",
+
         letterSpacing: "0.01em",
       }}
     >
