@@ -13,8 +13,8 @@ import {
   Sparkles,
   Zap
 } from "lucide-react";
-import { toast } from "react-hot-toast";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "react-hot-toast";
 import { fetchTelegramUserStatus } from "../api/node-api";
 import {
   addPurchasedCredits,
@@ -25,10 +25,10 @@ import {
 } from "../api/telegram-api";
 
 // 1. Core Solana & Anchor Context Imports
-import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { BN } from "@coral-xyz/anchor";
+import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useProgram } from "../solana/program/anchor-provider"; // Using your verified custom hook
-import { buyProduct } from "../solana/program/breezo.method";     // Target programmatic method
+import { buyProduct } from "../solana/program/breezo.method"; // Target programmatic method
 
 interface Monitor {
   id: string;
@@ -101,27 +101,38 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
     return () => clearInterval(interval);
   }, [credits?.free_reset_date]);
 
+
   // ─── Parse Custom Go NullString JSON Response ──────────────────────────────
   useEffect(() => {
-    async function loadStatus() {
-      try {
-        const response = await fetchTelegramUserStatus();
-        if (response.success && response.data && response.data.telegram_username) {
-          const usernameStr = response.data.telegram_username;
-          setTelegramUsername(usernameStr);
-          setInputUsername(usernameStr || "");
-        } else {
-          setTelegramUsername(null);
-        }
-      } catch (err) {
-        console.error("Failed loading user telegram status", err);
+  async function loadStatus() {
+    try {
+      const response = await fetchTelegramUserStatus();
+
+      if (
+        response.success &&
+        response.data &&
+        response.data.TelegramUsername?.Valid
+      ) {
+        const username = response.data.TelegramUsername.String;
+
+        setTelegramUsername(username);
+        setInputUsername(username);
+      } else {
         setTelegramUsername(null);
-      } finally {
-        setLoadingUserData(false);
+        setInputUsername("");
       }
+    } catch (err) {
+      console.error("Failed loading user telegram status", err);
+
+      setTelegramUsername(null);
+      setInputUsername("");
+    } finally {
+      setLoadingUserData(false);
     }
-    loadStatus();
-  }, []);
+  }
+
+  loadStatus();
+}, []);
 
   // ─── Core Interaction Handlers ──────────────────────────────────────────────
   const handleInitiateLink = useCallback(async () => {
@@ -210,7 +221,7 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
 
   const activeTierObj = useMemo(() => PRICING_TIERS.find(t => t.id === selectedTier)!, [selectedTier]);
 
-  const hasTelegramData = telegramUsername !== null && telegramUsername !== "";
+  const hasTelegramData = telegramUsername !== null ;
   const displayUsername = telegramUsername || linkData?.bot_username || "Not Connected";
   const pendingCode = linkData?.verification_code || null;
 

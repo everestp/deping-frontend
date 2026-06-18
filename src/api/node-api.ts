@@ -10,7 +10,7 @@ import type {
   ActiveNode,
   ValidateDeleteNodePayload,
 } from '../types/miner';
-import { TelegramUser } from '../types/telegram';
+import { TelegramStatusApiResponse, TelegramUser } from '../types/telegram';
 import { BASE_URL } from './constant';
 
 
@@ -118,7 +118,7 @@ export interface ApiResponse {
   data: TelegramUser | null;
 }
 
-export async function fetchTelegramUserStatus(): Promise<ApiResponse>  {
+export async function fetchTelegramUserStatus(): Promise<TelegramStatusApiResponse>  {
   const res = await fetch(`${BASE_URL}/api/v1/telegram/me`, {
     method: 'GET',
     headers: authHeaders(),

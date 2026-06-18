@@ -12,8 +12,16 @@ export interface TelegramUser {
 
 // The Envelope Wrapper Type requested for your API client 
 export interface TelegramStatusApiResponse {
-  success: boolean;
-  data: TelegramUser | null; // null if database returns no rows, otherwise contains the record
+ success: boolean;
+  data: {
+    ID: number;
+    UserID: number;
+    TelegramUsername: {
+      String: string;
+      Valid: boolean;
+    };
+    IsVerified: boolean;
+  } | null;
 }
 
 // Response structure specifically when initializing a new link connection handshake
