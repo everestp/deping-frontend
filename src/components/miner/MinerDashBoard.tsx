@@ -10,7 +10,7 @@ import {
     TrendingUp,
     Zap
 } from 'lucide-react';
-import { useState } from 'react';
+
 import type { PendingTx, RunnerNode, TerminalLine } from '../../types/miner';
 import { Button } from '../Common/Button';
 import { StakePanel } from './StakePanel';

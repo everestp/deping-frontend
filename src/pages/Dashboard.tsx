@@ -22,7 +22,7 @@ import { Card } from '../components/Common/Card';
 import { MetricBox } from '../components/Common/MetricBox';
 import { LatencyChart, LatencyDataPoint } from '../components/Metrics/LatencyChart';
 import { useMonitors } from '../hooks/useMonitor';
-import type { ApiMonitorStats, ApiPing, BarStatus, MonitorView, NodeStatus } from '../types/monitor';
+import type { ApiMonitorStats, ApiPing, MonitorView, NodeStatus } from '../types/monitor';
 
 // ─── Leaflet icon fix ─────────────────────────────────────────────────────────
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -33,16 +33,16 @@ L.Icon.Default.mergeOptions({
 });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const BAR_COLORS: Record<BarStatus, string> = {
-  green: 'bg-emerald-400',
-  red: 'bg-red-400',
-  gray: 'bg-white/10',
-};
-const BAR_BORDERS: Record<BarStatus, string> = {
-  green: 'border-emerald-400/40',
-  red: 'border-red-400/40',
-  gray: 'border-white/10',
-};
+// const BAR_COLORS: Record<BarStatus, string> = {
+//   green: 'bg-emerald-400',
+//   red: 'bg-red-400',
+//   gray: 'bg-white/10',
+// };
+// const BAR_BORDERS: Record<BarStatus, string> = {
+//   green: 'border-emerald-400/40',
+//   red: 'border-red-400/40',
+//   gray: 'border-white/10',
+// };
 const STATUS_CONFIG = {
   healthy: { color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/25', dot: 'bg-emerald-400', label: 'Healthy' },
   degraded: { color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/25', dot: 'bg-amber-400', label: 'Degraded' },
@@ -61,22 +61,16 @@ function formatUrl(url: string): string {
 
 // Build latency chart points from recent pings of a monitor
 function buildChartFromPings(pings: ApiPing[]): LatencyDataPoint[] {
-  // Group by minute, take up to 12 most recent minutes
-  const byMinute = new Map<string, number[]>();
-  pings.forEach((p) => {
-    const d = new Date(p.Timestamp);
-    const key = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    if (!byMinute.has(key)) byMinute.set(key, []);
-    byMinute.get(key)!.push(p.LatencyMs);
-  });
-  return Array.from(byMinute.entries())
-    .slice(-12)
-    .map(([time, vals]) => ({
-      time,
-      Latency: Math.round(vals.reduce((s, v) => s + v, 0) / vals.length),
-    }));
+  return [...pings].reverse().map((p) => ({
+    time: new Date(p.Timestamp).toLocaleTimeString([], { 
+      hour: '2-digit', minute: '2-digit', second: '2-digit' 
+    }),
+    dns: Math.round((p.DnsUs || 0) / 1000),
+    tcp: Math.round((p.TtfbUs || 0) / 1000),
+    tls: Math.round((p.TlsUs || 0) / 1000),
+    total: Math.round((p.TotalUs || 0) / 1000),
+  }));
 }
-
 // ─── Live Map (WebSocket-driven) ──────────────────────────────────────────────
 interface LiveMapProps {
   nodeStatuses: Record<string, NodeStatus>;
@@ -525,23 +519,32 @@ const MonitorRow = ({ monitor, STATUS_CONFIG, formatUrl, setSelectedMonitorId }:
   const [stats, setStats] = useState<ApiMonitorStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let interval: number;
-    const fetchLatest = async () => {
-      try {
-        const data = await fetchMonitorStats(monitor.id);
-        setStats(data);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    };
+useEffect(() => {
+  let interval: NodeJS.Timeout | undefined; // Properly typed for both Node and Browser
 
-    if (isExpanded) {
-      setLoading(true);
-      fetchLatest();
-      interval = setInterval(fetchLatest, (monitor.check_interval || 30) * 1000);
+  const fetchLatest = async () => {
+    try {
+      const data = await fetchMonitorStats(monitor.id);
+      setStats(data);
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setLoading(false); 
     }
-    return () => clearInterval(interval);
-  }, [isExpanded, monitor.id, monitor.check_interval]);
+  };
+
+  if (isExpanded) {
+    setLoading(true);
+    fetchLatest();
+    // Start the interval and assign it to the scoped variable
+    interval = setInterval(fetchLatest, (monitor.check_interval || 30) * 1000);
+  }
+
+  // Cleanup: This now has access to the 'interval' variable defined above
+  return () => {
+    if (interval) clearInterval(interval);
+  };
+}, [isExpanded, monitor.id, monitor.check_interval]);
 
   // --- 1. Pre-calculate the Pings Map for O(1) rendering ---
   const intervalMs = (stats?.check_interval || 30) * 1000;

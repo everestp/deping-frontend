@@ -48,7 +48,7 @@ export function NetworkMap() {
                 attribution="&copy; OpenStreetMap & CARTO"
               />
 
-              {nodeLocations.map((n, i) => (
+              {nodeLocations.map((n, _) => (
                 <CircleMarker
                   key={n.id}
                   center={[n.coords[1], n.coords[0]]} // Leaflet = [lat, lng]

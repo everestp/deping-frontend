@@ -41,7 +41,7 @@ export function StakePanel({
       if (tab === 'stake_more') {
         if (isNaN(val) || val <= 0) throw new Error('Enter a valid amount.');
         txSignature = await onStakeMore(val);
-        setFeedback({ type: 'success', msg: `Successfully staked ${val.toFixed(4)} DPNG.` });
+        setFeedback({ type: 'success', msg: `Successfully staked ${val.toFixed(4)} DPNG. singature ${txSignature}` });
       } 
       else if (tab === 'withdraw_stake') {
         if (isNaN(val) || val <= 0) throw new Error('Enter a valid amount.');
@@ -50,10 +50,10 @@ export function StakePanel({
         txSignature = await onWithdrawStake(val);
         // // Sync with your Web2 DB after successful chain TX
         // await validateUnstake({ signature: txSignature, node_pda: nodePda, amount: val });
-        setFeedback({ type: 'success', msg: `Withdrawal of ${val.toFixed(4)} DPNG successful.` });
+        setFeedback({ type: 'success', msg: `Withdrawal of ${val.toFixed(4)} DPNG successful. singature ${txSignature}` });
       } 
       else if (tab === 'delete_account') {
-        txSignature = await onDeleteAccount(stakedAmount);
+         await onDeleteAccount(stakedAmount);
         setFeedback({ type: 'success', msg: 'Account deleted. Redirecting...' });
         setTimeout(() => navigate('/'), 2000);
         return;

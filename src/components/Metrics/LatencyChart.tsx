@@ -9,12 +9,12 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-
 export interface LatencyDataPoint {
   time: string;
-  'US-East': number;
-  'EU-Central': number;
-  'AP-South': number;
+  dns: number;
+  tcp: number;
+  tls: number;
+  total: number; // Changed from totalUs to 'total'
 }
 
 interface LatencyChartProps {
@@ -22,11 +22,11 @@ interface LatencyChartProps {
 }
 
 const LINES = [
-  { key: 'US-East', color: '#38bdf8' },
-  { key: 'EU-Central', color: '#34d399' },
-  { key: 'AP-South', color: '#fbbf24' },
+  { key: 'dns', color: '#3b82f6' },
+  { key: 'tcp', color: '#fbbf24' }, // Make this bright Amber
+  { key: 'tls', color: '#8b5cf6' },
+  { key: 'total', color: '#ffffff' },
 ];
-
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { color: string; name: string; value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
 
@@ -49,27 +49,25 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 export function LatencyChart({ data }: LatencyChartProps) {
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+      <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
         <XAxis
           dataKey="time"
-          tick={{ fontSize: 10, fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }}
-          axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
+          tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+          axisLine={false}
           tickLine={false}
         />
         <YAxis
-          tick={{ fontSize: 10, fill: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }}
+          tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => `${v}ms`}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Legend
-          wrapperStyle={{ fontSize: '11px', fontFamily: 'JetBrains Mono', paddingTop: '8px' }}
-          iconType="circle"
-          iconSize={6}
-        />
-        {LINES.map(({ key, color }) => (
+        <Legend verticalAlign="top" height={36} iconType="circle" />
+        
+        {/* Render breakdown lines */}
+        {LINES.filter(l => l.key !== 'total').map(({ key, color }) => (
           <Line
             key={key}
             type="monotone"
@@ -77,9 +75,19 @@ export function LatencyChart({ data }: LatencyChartProps) {
             stroke={color}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4, strokeWidth: 0 }}
+            opacity={0.7}
           />
         ))}
+
+        {/* Render 'total' last to sit on top */}
+        <Line
+          type="monotone"
+          dataKey="total"
+          stroke="#ffffff"
+          strokeWidth={3}
+          dot={{ r: 4, fill: '#ffffff' }}
+          activeDot={{ r: 6 }}
+        />
       </LineChart>
     </ResponsiveContainer>
   );
