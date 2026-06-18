@@ -5,9 +5,11 @@ import { ArrowRight, Cpu } from "lucide-react";
 import { HeroBackground } from "./HeroBackground";
 import { LaptopAnimation } from "./LaptopAnimation";
 import { Button } from "../ui/button";
+import { useNavigate } from "react-router-dom";
 
 
 export function Hero() {
+  const navigate = useNavigate()
   return (
     <section className="relative pt-36 pb-20 sm:pt-44 sm:pb-28 px-4 sm:px-6 overflow-hidden">
       <HeroBackground />
@@ -48,14 +50,16 @@ export function Hero() {
             <Button
               size="lg"
               className="bg-gradient-to-r from-primary to-secondary border-0 h-12 px-6 text-base glow-primary hover:opacity-95"
+              onClick={()=>navigate("/docs")}
             >
-              Start monitoring
+              Docs
               <ArrowRight className="w-4 h-4" />
             </Button>
             <Button
               size="lg"
               variant="outline"
               className="h-12 px-6 text-base glass border-white/10 hover:bg-white/5"
+              onClick={()=> navigate("/singup")}
             >
               <Cpu className="w-4 h-4" />
               Become a node
