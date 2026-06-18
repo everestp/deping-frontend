@@ -1,30 +1,8 @@
 "use client";
 
-import { motion, useAnimationFrame, useMotionValue } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface Node {
-  id: string;
-  label: string;
-  tech: string;
-  desc: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  layer: LayerColor;
-}
-
-interface FlowPath {
-  id: string;
-  step: number;
-  d: string;
-  color: string;
-  protocol: string;
-  packetColor: string;
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type LayerColor = "blue" | "purple" | "orange" | "green" | "red" | "yellow";
 
@@ -38,208 +16,254 @@ interface Layer {
   h: number;
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+interface Node {
+  id: string;
+  label: string;
+  tech: string;
+  desc: string;
+  logo: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: LayerColor;
+  delay?: number;
+}
 
-const CANVAS_W = 1280;
-const CANVAS_H = 700;
+interface Flow {
+  id: string;
+  d: string;
+  color: string;
+  packetColor: string;
+  duration: number;
+  delay: number;
+}
 
-const LAYER_STYLES: Record<LayerColor, { bg: string; border: string; labelBg: string; labelBorder: string; labelText: string; nodeBg: string; nodeBorder: string; titleColor: string; pulse: string }> = {
-  blue:   { bg: "rgba(55,138,221,0.04)",  border: "rgba(55,138,221,0.2)",  labelBg: "rgba(55,138,221,0.12)",  labelBorder: "rgba(55,138,221,0.3)",  labelText: "var(--color-text-info)",    nodeBg: "rgba(55,138,221,0.07)",  nodeBorder: "rgba(55,138,221,0.28)",  titleColor: "var(--color-text-info)",    pulse: "var(--color-text-info)" },
-  purple: { bg: "rgba(127,119,221,0.04)", border: "rgba(127,119,221,0.2)", labelBg: "rgba(127,119,221,0.12)", labelBorder: "rgba(127,119,221,0.3)", labelText: "#9b94f0",                   nodeBg: "rgba(127,119,221,0.07)", nodeBorder: "rgba(127,119,221,0.28)", titleColor: "#9b94f0",                   pulse: "#9b94f0" },
-  orange: { bg: "rgba(186,117,23,0.04)",  border: "rgba(186,117,23,0.2)",  labelBg: "rgba(186,117,23,0.12)",  labelBorder: "rgba(186,117,23,0.3)",  labelText: "var(--color-text-warning)", nodeBg: "rgba(186,117,23,0.07)",  nodeBorder: "rgba(186,117,23,0.28)",  titleColor: "var(--color-text-warning)", pulse: "var(--color-text-warning)" },
-  green:  { bg: "rgba(99,153,34,0.04)",   border: "rgba(99,153,34,0.2)",   labelBg: "rgba(99,153,34,0.12)",   labelBorder: "rgba(99,153,34,0.3)",   labelText: "var(--color-text-success)", nodeBg: "rgba(99,153,34,0.07)",   nodeBorder: "rgba(99,153,34,0.28)",   titleColor: "var(--color-text-success)", pulse: "var(--color-text-success)" },
-  red:    { bg: "rgba(226,75,74,0.04)",   border: "rgba(226,75,74,0.2)",   labelBg: "rgba(226,75,74,0.12)",   labelBorder: "rgba(226,75,74,0.3)",   labelText: "var(--color-text-danger)",  nodeBg: "rgba(226,75,74,0.07)",   nodeBorder: "rgba(226,75,74,0.28)",   titleColor: "var(--color-text-danger)",  pulse: "var(--color-text-danger)" },
-  yellow: { bg: "rgba(239,159,39,0.04)",  border: "rgba(239,159,39,0.2)",  labelBg: "rgba(239,159,39,0.12)",  labelBorder: "rgba(239,159,39,0.3)",  labelText: "#ef9f27",                   nodeBg: "rgba(239,159,39,0.07)",  nodeBorder: "rgba(239,159,39,0.28)",  titleColor: "#ef9f27",                   pulse: "#ef9f27" },
+interface StepBadge {
+  step: number;
+  cx: number;
+  cy: number;
+  color: string;
+  fill: string;
+}
+
+interface ProtoLabel {
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const W = 1260;
+const H = 720;
+
+const STYLES: Record<LayerColor, {
+  layerBg: string; layerBorder: string;
+  labelBg: string; labelBorder: string; labelText: string;
+  nodeBg: string; nodeBorder: string;
+  titleColor: string; pulse: string;
+}> = {
+  blue:   { layerBg:"rgba(55,138,221,.05)",   layerBorder:"rgba(55,138,221,.25)",   labelBg:"rgba(55,138,221,.14)",   labelBorder:"rgba(55,138,221,.32)",   labelText:"#378add", nodeBg:"rgba(55,138,221,.08)",   nodeBorder:"rgba(55,138,221,.30)",   titleColor:"#378add", pulse:"#378add" },
+  purple: { layerBg:"rgba(127,119,221,.05)",  layerBorder:"rgba(127,119,221,.25)",  labelBg:"rgba(127,119,221,.14)",  labelBorder:"rgba(127,119,221,.32)",  labelText:"#9b94f0", nodeBg:"rgba(127,119,221,.08)",  nodeBorder:"rgba(127,119,221,.30)",  titleColor:"#9b94f0", pulse:"#9b94f0" },
+  orange: { layerBg:"rgba(239,159,39,.05)",   layerBorder:"rgba(239,159,39,.25)",   labelBg:"rgba(239,159,39,.14)",   labelBorder:"rgba(239,159,39,.32)",   labelText:"#ef9f27", nodeBg:"rgba(239,159,39,.08)",   nodeBorder:"rgba(239,159,39,.30)",   titleColor:"#ef9f27", pulse:"#ef9f27" },
+  green:  { layerBg:"rgba(99,153,34,.05)",    layerBorder:"rgba(99,153,34,.25)",    labelBg:"rgba(99,153,34,.14)",    labelBorder:"rgba(99,153,34,.32)",    labelText:"#639922", nodeBg:"rgba(99,153,34,.08)",    nodeBorder:"rgba(99,153,34,.30)",    titleColor:"#639922", pulse:"#639922" },
+  red:    { layerBg:"rgba(226,75,74,.05)",    layerBorder:"rgba(226,75,74,.25)",    labelBg:"rgba(226,75,74,.14)",    labelBorder:"rgba(226,75,74,.32)",    labelText:"#e24b4a", nodeBg:"rgba(226,75,74,.08)",    nodeBorder:"rgba(226,75,74,.30)",    titleColor:"#e24b4a", pulse:"#e24b4a" },
+  yellow: { layerBg:"rgba(239,159,39,.04)",   layerBorder:"rgba(239,159,39,.22)",   labelBg:"rgba(239,159,39,.14)",   labelBorder:"rgba(239,159,39,.32)",   labelText:"#ef9f27", nodeBg:"rgba(239,159,39,.08)",   nodeBorder:"rgba(239,159,39,.30)",   titleColor:"#ef9f27", pulse:"#ef9f27" },
 };
 
 const LAYERS: Layer[] = [
-  { id: "public",   label: "Public network",    color: "blue",   x: 18,  y: 36, w: 248, h: 636 },
-  { id: "ingress",  label: "Ingress",            color: "purple", x: 282, y: 36, w: 180, h: 636 },
-  { id: "bus",      label: "Event bus",          color: "orange", x: 478, y: 36, w: 180, h: 636 },
-  { id: "compute",  label: "Storage & compute",  color: "green",  x: 674, y: 36, w: 204, h: 636 },
-  { id: "chain",    label: "Blockchain",         color: "red",    x: 894, y: 36, w: 160, h: 300 },
-  { id: "notif",    label: "Notifications",      color: "yellow", x: 894, y: 352, w: 366, h: 320 },
+  { id:"public",  label:"Public network",    color:"blue",   x:16,   y:32,  w:234, h:678 },
+  { id:"ingress", label:"Ingress",           color:"purple", x:268,  y:32,  w:174, h:678 },
+  { id:"bus",     label:"Event bus",         color:"orange", x:460,  y:32,  w:174, h:678 },
+  { id:"compute", label:"Storage & compute", color:"green",  x:652,  y:32,  w:196, h:678 },
+  { id:"chain",   label:"Blockchain",        color:"red",    x:866,  y:32,  w:160, h:304 },
+  { id:"notif",   label:"Notifications",     color:"yellow", x:866,  y:350, w:382, h:360 },
 ];
 
 const NODES: Node[] = [
-  { id: "target", label: "Target websites",      tech: "HTTPS endpoints",             desc: "External sites monitored for uptime & latency",    x: 32,  y: 72,  w: 220, h: 90,  layer: "blue" },
-  { id: "miner",  label: "Rust CLI miner",        tech: "Tokio · gRPC client · HTTPS", desc: "Distributed edge worker. Polls targets, signs results", x: 32,  y: 220, w: 220, h: 90,  layer: "blue" },
-  { id: "grpc",   label: "Go gRPC core",          tech: "gRPC · streaming",            desc: "Worker coordination & job dispatch",               x: 296, y: 72,  w: 152, h: 90,  layer: "purple" },
-  { id: "rest",   label: "Go REST API",           tech: "Gin · signed payloads",       desc: "Result ingestion from miners",                    x: 296, y: 280, w: 152, h: 90,  layer: "purple" },
-  { id: "jq",     label: "job_queue",             tech: "AMQP queue",                  desc: "Monitoring batch dispatch to miners",              x: 492, y: 72,  w: 152, h: 78,  layer: "orange" },
-  { id: "rmq",    label: "RabbitMQ cluster",      tech: "AMQP · fanout exchange",      desc: "monitoring_events fanout — processing / telegram / analytics queues", x: 492, y: 210, w: 152, h: 90, layer: "orange" },
-  { id: "tq",     label: "telegram_queue",        tech: "AMQP · dedup · rate-limit",   desc: "Rate-limited alert delivery queue",               x: 492, y: 440, w: 152, h: 78,  layer: "orange" },
-  { id: "aq",     label: "analytics_queue",       tech: "AMQP queue",                  desc: "Metrics dashboard feed",                          x: 492, y: 566, w: 152, h: 78,  layer: "orange" },
-  { id: "redis",  label: "Redis scheduler",       tech: "ZSET · job scheduling",       desc: "Polls gRPC core with target batches",             x: 688, y: 56,  w: 176, h: 84,  layer: "green" },
-  { id: "worker", label: "Go worker pool",        tech: "consensus · fraud detection", desc: "Processes monitoring results, triggers rewards",  x: 688, y: 220, w: 176, h: 90,  layer: "green" },
-  { id: "pg",     label: "PostgreSQL",            tech: "metrics · uptime · balances", desc: "Persistent storage for all metrics",              x: 688, y: 396, w: 176, h: 84,  layer: "green" },
-  { id: "sync",   label: "Solana sync handler",   tech: "settlement engine · RPC",     desc: "Triggers on-chain reward transactions",           x: 688, y: 548, w: 176, h: 84,  layer: "green" },
-  { id: "sol",    label: "Solana Devnet",        tech: "PoH · RPC",                   desc: "On-chain settlement layer",                       x: 908, y: 56,  w: 136, h: 84,  layer: "red" },
-  { id: "anchor", label: "Anchor program",        tech: "SPL · reward distribution",   desc: "Distributes miner SPL rewards",                   x: 908, y: 200, w: 136, h: 84,  layer: "red" },
-  { id: "tbot",   label: "Telegram bot service",  tech: "consumer · dedup · rate-limit", desc: "DOWN alerts, latency spikes, real-time delivery", x: 908, y: 372, w: 136, h: 90, layer: "yellow" },
-  { id: "tapi",   label: "Telegram Bot API",      tech: "sendMessage endpoint",        desc: "Real-time alert delivery to operators",           x: 1080, y: 468, w: 156, h: 84, layer: "yellow" },
+  { id:"target", label:"Target websites",   tech:"HTTPS endpoints",              desc:"External sites monitored for uptime & latency",          logo:"🌐", x:24,   y:66,  w:218, h:92,  color:"blue",   delay:0 },
+  { id:"miner",  label:"Rust CLI miner",    tech:"Tokio · gRPC client · HTTPS",  desc:"Distributed edge worker. Polls targets, signs results",   logo:"🦀", x:24,   y:220, w:218, h:96,  color:"blue",   delay:60 },
+  { id:"grpc",   label:"Go gRPC core",      tech:"gRPC · streaming",             desc:"Worker coordination & job dispatch",                      logo:"⚡", x:276,  y:66,  w:150, h:88,  color:"purple", delay:120 },
+  { id:"rest",   label:"Go REST API",       tech:"Gin · signed payloads",        desc:"Result ingestion from miners",                           logo:"🔌", x:276,  y:284, w:150, h:88,  color:"purple", delay:160 },
+  { id:"jq",     label:"job_queue",         tech:"AMQP queue",                   desc:"Monitoring batch dispatch to miners",                     logo:"📬", x:468,  y:66,  w:150, h:80,  color:"orange", delay:200 },
+  { id:"rmq",    label:"RabbitMQ cluster",  tech:"AMQP · fanout exchange",       desc:"monitoring_events fanout — 3 consumer queues",           logo:"🐰", x:468,  y:210, w:150, h:96,  color:"orange", delay:240 },
+  { id:"tq",     label:"telegram_queue",    tech:"AMQP · dedup · rate-limit",    desc:"Rate-limited alert delivery queue",                      logo:"📤", x:468,  y:440, w:150, h:80,  color:"orange", delay:280 },
+  { id:"aq",     label:"analytics_queue",   tech:"AMQP queue",                   desc:"Metrics dashboard feed",                                 logo:"📊", x:468,  y:570, w:150, h:80,  color:"orange", delay:300 },
+  { id:"redis",  label:"Redis scheduler",   tech:"ZSET · job scheduling",        desc:"Polls gRPC core with target batches",                    logo:"⚡", x:660,  y:56,  w:180, h:86,  color:"green",  delay:340 },
+  { id:"worker", label:"Go worker pool",    tech:"consensus · fraud detection",  desc:"Processes results, triggers rewards",                    logo:"⚙️", x:660,  y:214, w:180, h:90,  color:"green",  delay:380 },
+  { id:"pg",     label:"PostgreSQL",        tech:"metrics · uptime · balances",  desc:"Persistent storage for all metrics",                     logo:"🐘", x:660,  y:400, w:180, h:84,  color:"green",  delay:420 },
+  { id:"sync",   label:"Solana sync handler",tech:"settlement engine · RPC",     desc:"Triggers on-chain reward txns",                          logo:"🔄", x:660,  y:554, w:180, h:84,  color:"green",  delay:460 },
+  { id:"sol",    label:"Solana Devnet",     tech:"PoH · RPC",                    desc:"On-chain settlement layer",                              logo:"◎",  x:874,  y:56,  w:144, h:84,  color:"red",    delay:500 },
+  { id:"anchor", label:"Anchor program",    tech:"SPL · reward distribution",    desc:"Distributes miner SPL rewards",                          logo:"⚓", x:874,  y:210, w:144, h:84,  color:"red",    delay:540 },
+  { id:"tbot",   label:"Telegram bot svc",  tech:"consumer · dedup · rate-limit",desc:"DOWN alerts, latency spikes, real-time delivery",        logo:"🤖", x:874,  y:380, w:152, h:96,  color:"yellow", delay:580 },
+  { id:"tapi",   label:"Telegram Bot API",  tech:"sendMessage endpoint",         desc:"Real-time alert delivery to operators",                   logo:"✈️", x:1056, y:478, w:160, h:84,  color:"yellow", delay:620 },
 ];
 
-const FLOWS: FlowPath[] = [
-  { id:"f1",  step:1,  d:"M 776,98 C 720,98 490,98 448,117",          color:"rgba(99,153,34,0.55)",   protocol:"Redis",    packetColor:"rgba(99,153,34,0.95)" },
-  { id:"f2",  step:2,  d:"M 448,117 C 470,117 472,111 492,111",       color:"rgba(127,119,221,0.55)", protocol:"AMQP",     packetColor:"rgba(127,119,221,0.95)" },
-  { id:"f3",  step:3,  d:"M 492,111 C 430,111 140,140 142,220",       color:"rgba(55,138,221,0.55)",  protocol:"gRPC",     packetColor:"rgba(55,138,221,0.95)" },
-  { id:"f4",  step:4,  d:"M 142,220 C 80,200 52,180 52,162",          color:"rgba(55,138,221,0.4)",   protocol:"HTTPS",    packetColor:"rgba(55,138,221,0.8)" },
-  { id:"f5",  step:5,  d:"M 52,162 C 100,162 160,200 160,220",        color:"rgba(55,138,221,0.4)",   protocol:"HTTPS",    packetColor:"rgba(55,138,221,0.8)" },
-  { id:"f6",  step:6,  d:"M 200,280 C 250,280 268,295 296,305",       color:"rgba(127,119,221,0.55)", protocol:"REST",     packetColor:"rgba(127,119,221,0.95)" },
-  { id:"f7",  step:7,  d:"M 448,310 C 466,310 468,255 492,255",       color:"rgba(186,117,23,0.55)",  protocol:"AMQP",     packetColor:"rgba(186,117,23,0.95)" },
-  { id:"f8",  step:8,  d:"M 644,255 C 660,255 668,260 688,255",       color:"rgba(99,153,34,0.55)",   protocol:"AMQP",     packetColor:"rgba(99,153,34,0.95)" },
-  { id:"f9",  step:9,  d:"M 568,300 C 568,360 568,420 568,440",       color:"rgba(239,159,39,0.55)",  protocol:"AMQP",     packetColor:"rgba(239,159,39,0.95)" },
-  { id:"f10", step:10, d:"M 574,310 C 574,460 574,550 574,566",       color:"rgba(239,159,39,0.45)",  protocol:"AMQP",     packetColor:"rgba(239,159,39,0.8)" },
-  { id:"f11", step:11, d:"M 688,265 C 660,265 648,265 644,265",       color:"rgba(99,153,34,0.5)",    protocol:"queue",    packetColor:"rgba(99,153,34,0.85)" },
-  { id:"f12", step:12, d:"M 776,310 C 776,360 776,390 776,396",       color:"rgba(99,153,34,0.55)",   protocol:"SQL",      packetColor:"rgba(99,153,34,0.95)" },
-  { id:"f13", step:13, d:"M 688,290 C 640,290 630,400 644,480",       color:"rgba(99,153,34,0.5)",    protocol:"AMQP",     packetColor:"rgba(99,153,34,0.85)" },
-  { id:"f14", step:14, d:"M 644,480 C 660,510 668,548 688,580",       color:"rgba(226,75,74,0.55)",   protocol:"AMQP",     packetColor:"rgba(226,75,74,0.95)" },
-  { id:"f15", step:15, d:"M 864,590 C 882,590 884,420 884,140",       color:"rgba(226,75,74,0.55)",   protocol:"RPC",      packetColor:"rgba(226,75,74,0.95)" },
-  { id:"f16", step:16, d:"M 976,140 C 976,172 976,188 976,200",       color:"rgba(226,75,74,0.55)",   protocol:"SPL",      packetColor:"rgba(226,75,74,0.95)" },
-  { id:"f17", step:17, d:"M 644,479 C 780,479 860,440 908,417",       color:"rgba(239,159,39,0.55)",  protocol:"AMQP",     packetColor:"rgba(239,159,39,0.95)" },
-  { id:"f18", step:18, d:"M 1044,417 C 1070,430 1090,455 1090,468",  color:"rgba(239,159,39,0.55)",   protocol:"Bot API",  packetColor:"rgba(239,159,39,0.95)" },
+const FLOWS: Flow[] = [
+  { id:"f1",  d:"M750,99 C700,99 620,99 618,106",                                            color:"rgba(99,153,34,.5)",   packetColor:"rgba(99,153,34,.95)",   duration:1.4, delay:0   },
+  { id:"f2",  d:"M468,106 C440,106 432,110 426,110",                                         color:"rgba(127,119,221,.5)", packetColor:"rgba(127,119,221,.95)", duration:1.8, delay:0.3 },
+  { id:"f3",  d:"M276,110 C230,110 200,200 180,240 C164,268 144,262 133,262",                color:"rgba(55,138,221,.5)",  packetColor:"rgba(55,138,221,.95)",  duration:2.0, delay:0.6 },
+  { id:"f4",  d:"M133,260 C90,240 80,160 80,158 C80,140 100,130 133,120",                   color:"rgba(55,138,221,.4)",  packetColor:"rgba(55,138,221,.8)",   duration:2.5, delay:0.1 },
+  { id:"f5",  d:"M242,310 C258,310 266,324 276,330",                                         color:"rgba(127,119,221,.55)",packetColor:"rgba(127,119,221,.95)", duration:1.6, delay:0.4 },
+  { id:"f6",  d:"M426,328 C444,328 454,260 468,257",                                         color:"rgba(239,159,39,.55)", packetColor:"rgba(239,159,39,.95)",  duration:1.5, delay:0.2 },
+  { id:"f7",  d:"M618,257 C636,257 644,258 660,260",                                         color:"rgba(99,153,34,.55)",  packetColor:"rgba(99,153,34,.95)",   duration:1.3, delay:0.5 },
+  { id:"f8",  d:"M543,306 L543,440",                                                          color:"rgba(239,159,39,.5)",  packetColor:"rgba(239,159,39,.95)",  duration:2.0, delay:0.7 },
+  { id:"f9",  d:"M549,306 L549,570",                                                          color:"rgba(239,159,39,.4)",  packetColor:"rgba(239,159,39,.8)",   duration:2.2, delay:1.0 },
+  { id:"f10", d:"M750,304 L750,400",                                                          color:"rgba(99,153,34,.55)",  packetColor:"rgba(99,153,34,.95)",   duration:1.7, delay:0.3 },
+  { id:"f11", d:"M755,304 C700,400 680,500 660,596",                                         color:"rgba(99,153,34,.45)",  packetColor:"rgba(99,153,34,.85)",   duration:2.4, delay:0.8 },
+  { id:"f12", d:"M840,596 C860,560 862,200 866,140 C868,116 870,100 874,98",                color:"rgba(226,75,74,.55)",  packetColor:"rgba(226,75,74,.95)",   duration:2.2, delay:0.2 },
+  { id:"f13", d:"M946,140 L946,210",                                                          color:"rgba(226,75,74,.55)",  packetColor:"rgba(226,75,74,.95)",   duration:1.5, delay:0.6 },
+  { id:"f14", d:"M618,480 C700,480 820,440 874,428",                                         color:"rgba(239,159,39,.55)", packetColor:"rgba(239,159,39,.95)",  duration:1.8, delay:0.4 },
+  { id:"f15", d:"M1026,428 C1048,450 1060,466 1056,520",                                    color:"rgba(239,159,39,.55)", packetColor:"rgba(239,159,39,.95)",  duration:1.6, delay:0.9 },
 ];
 
-// Step label positions
-const STEP_LABELS: { step: number; x: number; y: number; color: string }[] = [
-  { step:1,  x:588, y:85,  color:"rgba(99,153,34,0.9)" },
-  { step:2,  x:470, y:100, color:"rgba(127,119,221,0.9)" },
-  { step:3,  x:330, y:133, color:"rgba(55,138,221,0.9)" },
-  { step:4,  x:62,  y:195, color:"rgba(55,138,221,0.9)" },
-  { step:5,  x:178, y:198, color:"rgba(55,138,221,0.9)" },
-  { step:6,  x:254, y:274, color:"rgba(127,119,221,0.9)" },
-  { step:7,  x:462, y:286, color:"rgba(186,117,23,0.9)" },
-  { step:8,  x:658, y:244, color:"rgba(99,153,34,0.9)" },
-  { step:9,  x:541, y:368, color:"rgba(239,159,39,0.9)" },
-  { step:10, x:528, y:500, color:"rgba(239,159,39,0.8)" },
-  { step:12, x:752, y:360, color:"rgba(99,153,34,0.9)" },
-  { step:13, x:630, y:365, color:"rgba(99,153,34,0.8)" },
-  { step:14, x:652, y:522, color:"rgba(226,75,74,0.9)" },
-  { step:15, x:858, y:370, color:"rgba(226,75,74,0.9)" },
-  { step:16, x:952, y:172, color:"rgba(226,75,74,0.9)" },
-  { step:17, x:770, y:462, color:"rgba(239,159,39,0.9)" },
-  { step:18, x:1064, y:440, color:"rgba(239,159,39,0.9)" },
+const STEP_BADGES: StepBadge[] = [
+  { step:1,  cx:688, cy:86,  color:"rgba(99,153,34,.9)",   fill:"rgba(99,153,34,.15)"   },
+  { step:2,  cx:445, cy:97,  color:"rgba(127,119,221,.9)", fill:"rgba(127,119,221,.15)" },
+  { step:3,  cx:200, cy:200, color:"rgba(55,138,221,.9)",  fill:"rgba(55,138,221,.15)"  },
+  { step:4,  cx:72,  cy:190, color:"rgba(55,138,221,.9)",  fill:"rgba(55,138,221,.15)"  },
+  { step:5,  cx:256, cy:298, color:"rgba(127,119,221,.9)", fill:"rgba(127,119,221,.15)" },
+  { step:6,  cx:448, cy:295, color:"rgba(239,159,39,.9)",  fill:"rgba(239,159,39,.15)"  },
+  { step:7,  cx:636, cy:248, color:"rgba(99,153,34,.9)",   fill:"rgba(99,153,34,.15)"   },
+  { step:8,  cx:530, cy:370, color:"rgba(239,159,39,.9)",  fill:"rgba(239,159,39,.15)"  },
+  { step:9,  cx:730, cy:355, color:"rgba(99,153,34,.9)",   fill:"rgba(99,153,34,.15)"   },
+  { step:10, cx:700, cy:450, color:"rgba(99,153,34,.9)",   fill:"rgba(99,153,34,.15)"   },
+  { step:11, cx:858, cy:360, color:"rgba(226,75,74,.9)",   fill:"rgba(226,75,74,.15)"   },
+  { step:12, cx:930, cy:178, color:"rgba(226,75,74,.9)",   fill:"rgba(226,75,74,.15)"   },
+  { step:13, cx:760, cy:466, color:"rgba(239,159,39,.9)",  fill:"rgba(239,159,39,.15)"  },
+  { step:14, cx:1046,cy:460, color:"rgba(239,159,39,.9)",  fill:"rgba(239,159,39,.15)"  },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function getPathPoint(path: SVGPathElement, t: number) {
-  const len = path.getTotalLength();
-  return path.getPointAtLength(t * len);
-}
+const PROTO_LABELS: ProtoLabel[] = [
+  { x:690,  y:78,  text:"ZSET",    color:"rgba(99,153,34,.7)"   },
+  { x:445,  y:89,  text:"AMQP",   color:"rgba(127,119,221,.7)" },
+  { x:226,  y:193, text:"gRPC",   color:"rgba(55,138,221,.7)"  },
+  { x:66,   y:182, text:"HTTPS",  color:"rgba(55,138,221,.7)"  },
+  { x:862,  y:352, text:"RPC",    color:"rgba(226,75,74,.7)"   },
+  { x:932,  y:170, text:"SPL",    color:"rgba(226,75,74,.7)"   },
+  { x:1050, y:452, text:"Bot API",color:"rgba(239,159,39,.7)"  },
+];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function PulseDot({ color }: { color: string }) {
   return (
-    <span
-      style={{ position: "absolute", top: 9, right: 9, width: 8, height: 8 }}
-    >
-      <motion.span
-        style={{
-          display: "block",
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: color,
-          position: "absolute",
-        }}
-      />
-      <motion.span
-        animate={{ scale: [1, 2.5], opacity: [0.8, 0] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-        style={{
-          display: "block",
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          border: `2px solid ${color}`,
-          position: "absolute",
-          top: 0,
-          left: 0,
-        }}
-      />
+    <span style={{ position:"absolute", top:8, right:8, width:7, height:7 }}>
+      <span style={{ position:"absolute", width:7, height:7, borderRadius:"50%", background:color }} />
+      <span style={{
+        position:"absolute", width:7, height:7, borderRadius:"50%",
+        border:`1.5px solid ${color}`,
+        animation:"arch-pulse 2s ease-out infinite",
+      }} />
     </span>
   );
 }
 
-function ArchNode({ node, index }: { node: Node; index: number }) {
-  const s = LAYER_STYLES[node.layer];
+interface ArchNodeProps { node: Node }
+
+function ArchNode({ node }: ArchNodeProps) {
+  const s = STYLES[node.color];
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), node.delay ?? 0);
+    return () => clearTimeout(t);
+  }, [node.delay]);
+
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.92 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.04, duration: 0.4, ease: "easeOut" }}
-      whileHover={{ y: -4, scale: 1.03, zIndex: 50 }}
+    <div
       style={{
-        position: "absolute",
-        left: node.x,
-        top: node.y,
-        width: node.w,
-        height: node.h,
-        background: s.nodeBg,
-        border: `1px solid ${s.nodeBorder}`,
-        borderRadius: 8,
-        padding: "10px 12px 9px",
-        backdropFilter: "blur(4px)",
-        cursor: "default",
-        transition: "box-shadow 0.15s",
+        position:"absolute",
+        left:node.x, top:node.y, width:node.w, height:node.h,
+        background:s.nodeBg,
+        border:`1px solid ${s.nodeBorder}`,
+        borderRadius:8,
+        padding:"9px 11px 8px",
+        backdropFilter:"blur(4px)",
+        cursor:"default",
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0) scale(1)" : "translateY(6px) scale(0.96)",
+        transition:"opacity .35s ease, transform .35s ease",
+        zIndex:10,
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px) scale(1.025)";
+        (e.currentTarget as HTMLDivElement).style.zIndex = "50";
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLDivElement).style.transform = "translateY(0) scale(1)";
+        (e.currentTarget as HTMLDivElement).style.zIndex = "10";
       }}
     >
       <PulseDot color={s.pulse} />
-      <div style={{ fontSize: 12, fontWeight: 500, color: s.titleColor, lineHeight: 1.2, paddingRight: 16 }}>
+      <div style={{ fontSize:11.5, fontWeight:600, color:s.titleColor, lineHeight:1.2, paddingRight:14 }}>
         {node.label}
       </div>
-      <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 3, fontFamily: "var(--font-mono)" }}>
+      <div style={{ fontSize:9.5, fontFamily:"var(--font-mono, monospace)", marginTop:3, opacity:.7 }}>
         {node.tech}
       </div>
-      <div style={{ fontSize: 10, color: "var(--color-text-secondary)", marginTop: 4, lineHeight: 1.4 }}>
+      <div style={{ fontSize:9.5, marginTop:4, lineHeight:1.4, opacity:.8 }}>
         {node.desc}
       </div>
-    </motion.div>
+      <span style={{ position:"absolute", bottom:6, right:8, fontSize:13, opacity:.5 }}>
+        {node.logo}
+      </span>
+    </div>
   );
 }
 
-function AnimatedPacket({
-  pathId,
-  color,
-  speed,
-  offset,
-}: {
+// ─── Animated packet along an SVG path ───────────────────────────────────────
+
+interface PacketProps {
   pathId: string;
   color: string;
-  speed: number;
-  offset: number;
-}) {
-  const cx = useMotionValue(0);
-  const cy = useMotionValue(0);
-  const t = useRef(offset);
-
-  useAnimationFrame(() => {
-    const el = document.getElementById(pathId) as SVGPathElement | null;
-    if (!el) return;
-    t.current = (t.current + speed) % 1;
-    const pt = getPathPoint(el, t.current);
-    cx.set(pt.x);
-    cy.set(pt.y);
-  });
-
-  return (
-    <motion.circle
-      style={{ cx, cy }}
-      r={3}
-      fill={color}
-      opacity={0.92}
-    />
-  );
+  duration: number;
+  delay: number;
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+function AnimatedPacket({ pathId, color, duration, delay }: PacketProps) {
+  const circleRef = useRef<SVGCircleElement>(null);
+  const startRef = useRef<number | null>(null);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const animate = (ts: number) => {
+      if (!mounted) return;
+      if (startRef.current === null) startRef.current = ts;
+      const elapsed = (ts - startRef.current - delay * 1000) / (duration * 1000);
+      if (elapsed >= 0) {
+        const t = elapsed % 1;
+        const path = document.getElementById(pathId) as SVGPathElement | null;
+        const circle = circleRef.current;
+        if (path && circle) {
+          const len = path.getTotalLength();
+          const pt = path.getPointAtLength(t * len);
+          circle.setAttribute("cx", String(pt.x));
+          circle.setAttribute("cy", String(pt.y));
+          circle.setAttribute("opacity", "0.92");
+        }
+      }
+      rafRef.current = requestAnimationFrame(animate);
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      mounted = false;
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [pathId, duration, delay]);
+
+  return <circle ref={circleRef} r={3.5} fill={color} opacity={0} />;
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function ArchitectureSection() {
   const [mounted, setMounted] = useState(false);
-  const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -248,289 +272,168 @@ export function ArchitectureSection() {
   return (
     <section
       id="architecture"
-      style={{ position: "relative", padding: "96px 0", overflowX: "hidden" }}
+      style={{ position:"relative", padding:"96px 0", overflowX:"hidden" }}
     >
-      {/* Subtle radial glow behind centre */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 0,
-          background:
-            "radial-gradient(ellipse 60% 50% at 50% 50%, var(--glow-primary, rgba(55,138,221,0.06)), transparent 70%)",
-          pointerEvents: "none",
-        }}
-      />
+      {/* Keyframes injected once */}
+      <style>{`
+        @keyframes arch-pulse {
+          0%   { transform: scale(1); opacity: .8; }
+          100% { transform: scale(2.6); opacity: 0; }
+        }
+      `}</style>
+
+      {/* Radial glow */}
+      <div aria-hidden style={{
+        position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
+        background:"radial-gradient(ellipse 60% 50% at 50% 50%, rgba(55,138,221,.05), transparent 70%)",
+      }} />
 
       {/* Heading */}
-      <div style={{ textAlign: "center", marginBottom: 48, position: "relative", zIndex: 1, padding: "0 24px" }}>
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--color-text-tertiary)", fontWeight: 500, marginBottom: 8 }}
-        >
+      <div style={{ textAlign:"center", marginBottom:48, position:"relative", zIndex:1, padding:"0 24px" }}>
+        <p style={{ fontSize:11, textTransform:"uppercase", letterSpacing:".18em", opacity:.5, fontWeight:500, marginBottom:8 }}>
           Architecture
-        </motion.div>
-        <motion.h2
-          initial={{ opacity: 0, y: 14 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="font-display"
-          style={{ fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.1, margin: 0 }}
-        >
+        </p>
+        <h2 style={{ fontSize:"clamp(28px,4vw,44px)", fontWeight:700, letterSpacing:"-.02em", lineHeight:1.1, margin:0 }}>
           Built for{" "}
-          <span className="text-gradient-primary">planet-scale</span> reliability
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          style={{ marginTop: 12, color: "var(--color-text-secondary)", maxWidth: 560, margin: "12px auto 0", fontSize: 15, lineHeight: 1.6 }}
-        >
-          Rust workers at the edge, Go services at the core, RabbitMQ orchestration
-          in the middle, and Solana settlement at the base.
-        </motion.p>
+          <span style={{ background:"linear-gradient(135deg,#378add,#9b94f0)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+            planet-scale
+          </span>{" "}
+          reliability
+        </h2>
+        <p style={{ marginTop:12, opacity:.6, maxWidth:560, margin:"12px auto 0", fontSize:15, lineHeight:1.6 }}>
+          Rust workers at the edge, Go services at the core, RabbitMQ orchestration in the middle,
+          and Solana settlement at the base.
+        </p>
       </div>
 
-      {/* Scrollable canvas wrapper */}
-      <div style={{ overflowX: "auto", overflowY: "visible", padding: "0 24px 24px", position: "relative", zIndex: 1 }}>
-        <div
-          style={{
-            position: "relative",
-            width: CANVAS_W,
-            height: CANVAS_H,
-            minWidth: CANVAS_W,
-            margin: "0 auto",
-          }}
-        >
-          {/* Animated grid background */}
-          <motion.div
-            aria-hidden
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.35 }}
-            transition={{ duration: 1 }}
-            style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage:
-                "linear-gradient(var(--color-border-tertiary) 1px, transparent 1px), linear-gradient(90deg, var(--color-border-tertiary) 1px, transparent 1px)",
-              backgroundSize: "32px 32px",
-              borderRadius: 12,
-              pointerEvents: "none",
-            }}
-          />
+      {/* Scrollable canvas */}
+      <div style={{ overflowX:"auto", overflowY:"visible", padding:"0 24px 24px", position:"relative", zIndex:1 }}>
+        <div style={{ position:"relative", width:W, height:H, minWidth:W, margin:"0 auto" }}>
 
-          {/* Trust boundary: untrusted */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            style={{
-              position: "absolute",
-              left: 10,
-              top: 16,
-              width: 256,
-              height: CANVAS_H - 32,
-              border: "1.5px dashed var(--color-border-secondary)",
-              borderRadius: 12,
-              pointerEvents: "none",
-            }}
-          >
-            <span
-              style={{
-                position: "absolute",
-                top: -10,
-                left: 14,
-                background: "var(--color-background-primary)",
-                padding: "0 6px",
-                fontSize: 10,
-                fontWeight: 500,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "var(--color-text-tertiary)",
-              }}
-            >
-              Untrusted public network
-            </span>
-          </motion.div>
+          {/* Grid background */}
+          <div aria-hidden style={{
+            position:"absolute", inset:0, borderRadius:12, pointerEvents:"none", opacity:.35,
+            backgroundImage:"linear-gradient(rgba(120,120,120,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(120,120,120,.12) 1px,transparent 1px)",
+            backgroundSize:"30px 30px",
+          }} />
 
-          {/* Trust boundary: trusted */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.35 }}
-            style={{
-              position: "absolute",
-              left: 278,
-              top: 16,
-              width: CANVAS_W - 298,
-              height: CANVAS_H - 32,
-              border: "1.5px dashed var(--color-border-secondary)",
-              borderRadius: 12,
-              pointerEvents: "none",
-            }}
-          >
-            <span
-              style={{
-                position: "absolute",
-                top: -10,
-                left: 14,
-                background: "var(--color-background-primary)",
-                padding: "0 6px",
-                fontSize: 10,
-                fontWeight: 500,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "var(--color-text-tertiary)",
-              }}
-            >
-              Trusted backend system
-            </span>
-          </motion.div>
+          {/* Trust boundaries */}
+          {[
+            { left:8,   top:14, width:250, height:694, label:"Untrusted public network" },
+            { left:268, top:14, width:984, height:694, label:"Trusted backend system" },
+          ].map(b => (
+            <div key={b.label} style={{
+              position:"absolute", left:b.left, top:b.top, width:b.width, height:b.height,
+              borderRadius:12, border:"1.5px dashed rgba(150,150,150,.18)", pointerEvents:"none",
+            }}>
+              <span style={{
+                position:"absolute", top:-9, left:14,
+                fontSize:9, fontWeight:500, textTransform:"uppercase",
+                letterSpacing:".08em", color:"rgba(130,130,130,.6)",
+                padding:"0 6px",
+              }}>
+                {b.label}
+              </span>
+            </div>
+          ))}
 
           {/* Layer columns */}
-          {LAYERS.map((layer, i) => {
-            const s = LAYER_STYLES[layer.color];
+          {LAYERS.map(layer => {
+            const s = STYLES[layer.color];
             return (
-              <motion.div
-                key={layer.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, delay: 0.1 + i * 0.06 }}
-                style={{
-                  position: "absolute",
-                  left: layer.x,
-                  top: layer.y,
-                  width: layer.w,
-                  height: layer.h,
-                  background: s.bg,
-                  border: `1px solid ${s.border}`,
-                  borderRadius: 10,
-                  pointerEvents: "none",
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    top: -13,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: s.labelBg,
-                    border: `1px solid ${s.labelBorder}`,
-                    color: s.labelText,
-                    fontSize: 10,
-                    fontWeight: 500,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.1em",
-                    whiteSpace: "nowrap",
-                    padding: "2px 10px",
-                    borderRadius: 20,
-                  }}
-                >
+              <div key={layer.id} style={{
+                position:"absolute", left:layer.x, top:layer.y, width:layer.w, height:layer.h,
+                background:s.layerBg, border:`1px solid ${s.layerBorder}`, borderRadius:10, pointerEvents:"none",
+              }}>
+                <span style={{
+                  position:"absolute", top:-13, left:"50%", transform:"translateX(-50%)",
+                  background:s.labelBg, border:`1px solid ${s.labelBorder}`, color:s.labelText,
+                  fontSize:10, fontWeight:600, textTransform:"uppercase", letterSpacing:".1em",
+                  whiteSpace:"nowrap", padding:"2px 10px", borderRadius:20,
+                }}>
                   {layer.label}
                 </span>
-              </motion.div>
+              </div>
             );
           })}
 
-          {/* Flow SVG — paths + packets + step badges */}
+          {/* SVG — paths + packets + badges + labels */}
           <svg
-            ref={svgRef}
-            style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none" }}
-            width={CANVAS_W}
-            height={CANVAS_H}
-            viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
+            style={{ position:"absolute", inset:0, overflow:"visible", pointerEvents:"none" }}
+            width={W}
+            height={H}
+            viewBox={`0 0 ${W} ${H}`}
           >
             <defs>
-              <marker id="arch-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <marker id="arch-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
                 <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </marker>
             </defs>
 
-            {/* Paths */}
-            {FLOWS.map((flow, i) => (
-              <motion.path
-                key={flow.id}
-                id={flow.id}
-                d={flow.d}
+            {/* Flow paths */}
+            {FLOWS.map(f => (
+              <path
+                key={f.id}
+                id={f.id}
+                d={f.d}
                 fill="none"
-                stroke={flow.color}
+                stroke={f.color}
                 strokeWidth={1.5}
-                markerEnd="url(#arch-arrow)"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.6 + i * 0.04, ease: "easeInOut" }}
+                strokeDasharray="6 5"
+                markerEnd="url(#arch-arr)"
+                style={{
+                  animation:`arch-dash ${f.duration}s linear infinite ${f.delay}s`,
+                }}
               />
             ))}
 
-            {/* Protocol labels on key edges */}
-            {FLOWS.filter((f) => ["f1","f3","f4","f7","f15","f16","f18"].includes(f.id)).map((flow) => {
-              // midpoint label — compute from first and last d coords roughly
-              const sl = STEP_LABELS.find((s) => s.step === flow.step);
-              if (!sl) return null;
-              return (
-                <motion.text
-                  key={`lbl-${flow.id}`}
-                  x={sl.x}
-                  y={sl.y - 12}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="var(--color-text-tertiary)"
-                  fontFamily="var(--font-mono)"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.4 + flow.step * 0.03 }}
-                >
-                  {flow.protocol}
-                </motion.text>
-              );
-            })}
-
-            {/* Step number badges */}
-            {STEP_LABELS.map(({ step, x, y, color }) => (
-              <motion.g
-                key={`step-${step}`}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.2 + step * 0.03, duration: 0.3 }}
-              >
-                <circle cx={x} cy={y} r={8} fill={color.replace("0.9)", "0.12)")} stroke={color.replace("0.9)", "0.4)")} strokeWidth={0.8} />
-                <text
-                  x={x}
-                  y={y}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={9}
-                  fontWeight={500}
-                  fill={color}
-                  fontFamily="var(--font-sans)"
-                >
-                  {step}
-                </text>
-              </motion.g>
+            {/* Animated packets — client only */}
+            {mounted && FLOWS.map(f => (
+              <AnimatedPacket
+                key={`pkt-${f.id}`}
+                pathId={f.id}
+                color={f.packetColor}
+                duration={f.duration}
+                delay={f.delay}
+              />
             ))}
 
-            {/* Animated packets — only rendered client-side after mount */}
-            {mounted &&
-              FLOWS.map((flow, i) => (
-                <AnimatedPacket
-                  key={`pkt-${flow.id}`}
-                  pathId={flow.id}
-                  color={flow.packetColor}
-                  speed={0.0008 + (i % 7) * 0.0001}
-                  offset={i * 0.17}
-                />
-              ))}
+            {/* Step badges */}
+            {STEP_BADGES.map(b => (
+              <g key={`step-${b.step}`}>
+                <circle cx={b.cx} cy={b.cy} r={9} fill={b.fill} stroke={b.color.replace(".9)",",.4)")} strokeWidth={0.8} />
+                <text
+                  x={b.cx} y={b.cy}
+                  textAnchor="middle" dominantBaseline="central"
+                  fontSize={9} fontWeight={500} fill={b.color}
+                  fontFamily="var(--font-sans, sans-serif)"
+                >
+                  {b.step}
+                </text>
+              </g>
+            ))}
+
+            {/* Protocol labels */}
+            {PROTO_LABELS.map(p => (
+              <text
+                key={`proto-${p.text}`}
+                x={p.x} y={p.y}
+                textAnchor="middle"
+                fontSize={8}
+                fill={p.color}
+                fontFamily="var(--font-mono, monospace)"
+              >
+                {p.text}
+              </text>
+            ))}
           </svg>
 
+          {/* Dash animation keyframes */}
+          <style>{`@keyframes arch-dash { to { stroke-dashoffset: -30; } }`}</style>
+
           {/* Nodes */}
-          {NODES.map((node, i) => (
-            <ArchNode key={node.id} node={node} index={i} />
+          {NODES.map(node => (
+            <ArchNode key={node.id} node={node} />
           ))}
         </div>
       </div>
