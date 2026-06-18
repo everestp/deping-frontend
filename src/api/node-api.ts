@@ -11,8 +11,9 @@ import type {
   ValidateDeleteNodePayload,
 } from '../types/miner';
 import { TelegramUser } from '../types/telegram';
+import { BASE_URL } from './constant';
 
-const BASE = "http://localhost:8081";
+
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem('auth_token') ?? '';
@@ -40,7 +41,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 // ── GET /api/v1/runner/me ─────────────────────────────────
 export async function getRunnerMe(pubkey: string): Promise<MeResponse> {
-  const res = await fetch(`${BASE}/api/v1/runner/me`, {
+  const res = await fetch(`${BASE_URL}/api/v1/runner/me`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ pubkey }),
@@ -50,7 +51,7 @@ export async function getRunnerMe(pubkey: string): Promise<MeResponse> {
 
 // ── POST /api/v1/runner/register ──────────────────────────
 export async function registerRunner(payload: RegisterPayload): Promise<RunnerNode> {
-  const res = await fetch(`${BASE}/api/v1/runner/register`, {
+  const res = await fetch(`${BASE_URL}/api/v1/runner/register`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -60,7 +61,7 @@ export async function registerRunner(payload: RegisterPayload): Promise<RunnerNo
 
 // ── POST /api/v1/runner/activate ──────────────────────────
 export async function activateNode(payload:ActiveNode): Promise<RunnerNode> {
-  const res = await fetch(`${BASE}/api/v1/runner/activate`, {
+  const res = await fetch(`${BASE_URL}/api/v1/runner/activate`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -72,7 +73,7 @@ export async function activateNode(payload:ActiveNode): Promise<RunnerNode> {
 export async function validateStakePayment(
   payload: ValidateStakePayload,
 ): Promise<{ success: boolean; amount: number; receiver: string; timestamp: number }> {
-  const res = await fetch(`${BASE}/api/v1/runner/stake`, {
+  const res = await fetch(`${BASE_URL}/api/v1/runner/stake`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -84,7 +85,7 @@ export async function validateStakePayment(
 // 🔥 FIXED: Directing to the dedicated off-chain unstake route
 // Flips is_validator = false, updates staked_amount to 0, maps signature log
 export async function validateUnstakePayment( payload: ValidateStakePayload,): Promise<{ success: boolean; message: string; timestamp: number }> {
-  const res = await fetch(`${BASE}/api/v1/runner/unstake`, {
+  const res = await fetch(`${BASE_URL}/api/v1/runner/unstake`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -92,7 +93,7 @@ export async function validateUnstakePayment( payload: ValidateStakePayload,): P
   return handleResponse(res);
 }
 export async function validateDelete( payload: ValidateDeleteNodePayload,): Promise<{ success: boolean; message: string; timestamp: number }> {
-  const res = await fetch(`${BASE}/api/v1/runner/delete`, {
+  const res = await fetch(`${BASE_URL}/api/v1/runner/delete`, {
     method: 'DELETE',
     headers: authHeaders(),
     body: JSON.stringify(payload),
@@ -105,7 +106,7 @@ export async function validateDelete( payload: ValidateDeleteNodePayload,): Prom
 export async function sendHeartbeat(nodePubkey: string): Promise<void> {
   try {
     await fetch(
-      `${BASE}/api/v1/runner/heartbeat?pubkey=${encodeURIComponent(nodePubkey)}`,
+      `${BASE_URL}/api/v1/runner/heartbeat?pubkey=${encodeURIComponent(nodePubkey)}`,
       { method: 'POST', headers: authHeaders() },
     );
   } catch {
@@ -118,7 +119,7 @@ export interface ApiResponse {
 }
 
 export async function fetchTelegramUserStatus(): Promise<ApiResponse>  {
-  const res = await fetch(`${BASE}/api/v1/telegram/me`, {
+  const res = await fetch(`${BASE_URL}/api/v1/telegram/me`, {
     method: 'GET',
     headers: authHeaders(),
 

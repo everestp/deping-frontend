@@ -1,5 +1,5 @@
 // All Telegram-related API client logic.
-const BASE_URL = "http://localhost:8081";
+
 
 // ── Shared API Fetcher ─────────────────────────────────────────────────────
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -72,6 +72,7 @@ export const toggleMonitorNotification = (monitorId: string, enabled: boolean) =
 
 // ── Hooks ────────────────────────────────────────────────────────────────
 import { useState, useEffect, useCallback } from "react";
+import { BASE_URL } from "./constant";
 
 
 export function useCreditStatus() {
