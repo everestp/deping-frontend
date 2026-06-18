@@ -1,7 +1,6 @@
 // lib/auth-api.ts
 // Authentication API client — register, login, logout, session management.
 
-const BASE_URL =  "http://localhost:8081";
 
 // ══════════════════════════════════════════════════════════════════════════
 // Types
@@ -158,6 +157,7 @@ export function logout(): void {
 // ══════════════════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback } from "react";
+import { BASE_URL } from "./constant";
 
 // ── useAuth ───────────────────────────────────────────────────────────────
 // Central auth state hook. Use this at the top of your app or in a context.
