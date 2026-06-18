@@ -9,6 +9,7 @@ import { HowItWorks } from "../how-it-works/HowItWorks";
 
 import { NetworkMap } from "../network-map/NetworkMap";
 import { Pricing } from "../pricing/Pricing";
+import { TelegramPricing } from "../pricing/TelegramPricing";
 import { Security } from "../security/Security";
 import { StatsBar } from "../stats/StatsBar";
 import { TechStack } from "../tech-stack/TechStack";
@@ -30,6 +31,7 @@ export default function Home() {
       <Security />
       <TechStack />
       <Pricing />
+      <TelegramPricing/>
       <FAQ />
       <CTASection />
       <Footer />
