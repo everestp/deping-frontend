@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Cpu } from "lucide-react";
 import { Button } from "../ui/button";
+import { useNavigate } from "react-router-dom";
 
 export function CTASection() {
+  const navigate = useNavigate()
   return (
     <section className="relative px-4 sm:px-6 py-32 overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -51,13 +53,16 @@ export function CTASection() {
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Button
+          onClick={()=>navigate("/docs")}
             size="lg"
             className="h-12 px-6 bg-gradient-to-r from-primary to-secondary border-0 text-base glow-primary hover:opacity-95"
           >
-            Start monitoring
+           Docs
             <ArrowRight className="w-4 h-4" />
           </Button>
-          <Button size="lg" variant="outline" className="h-12 px-6 glass border-white/10 text-base">
+          <Button size="lg" variant="outline" className="h-12 px-6 glass border-white/10 text-base"
+          onClick={()=>navigate("/signup")}
+          >
             <Cpu className="w-4 h-4" />
             Become a node
           </Button>
