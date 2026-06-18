@@ -27,6 +27,8 @@ import {
 } from '../solana/program/breezo.method';
 
 import type { MinerView, RunnerNode, PendingTx, TerminalLine, ActiveNode } from '../types/miner';
+import { NodeAccount } from '../types/deping';
+
 
 const DEEPING_MINT = new PublicKey("DPg3P2U4syj8eGL6rRqMqhUfDayxVunh7Fmcowwh6hsj");
 const TOKEN_DECIMALS = 1_000_000_000;
@@ -51,45 +53,44 @@ export default function MinerNode() {
   const [claiming, setClaiming] = useState(false);
   const [claimAlert, setClaimAlert] = useState<string | null>(null);
   const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
+  
 
-  const refreshBalances = useCallback(async () => {
-    if (!publicKey || !program) return;
-    try {
-      // 1. Fetch Wallet Balance
-      const acc = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: DEEPING_MINT });
-      setWalletBalance(acc.value[0]?.account.data.parsed.info.tokenAmount.uiAmount ?? 0);
+const refreshBalances = useCallback(async () => {
+  if (!publicKey || !program) return;
+  try {
+    const acc = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: DEEPING_MINT });
+    setWalletBalance(acc.value[0]?.account.data.parsed.info.tokenAmount.uiAmount ?? 0);
 
-      // 2. Fetch Runner/Node Info
-      const resp = await getRunnerMe(publicKey.toBase58());
+    const resp = await getRunnerMe(publicKey.toBase58());
+    
+    if (resp.node) {
+      setRunner(resp.node);
+      setOffChainBalance(resp.node.offchain_accumulated_tokens);
       
-      if (resp.node) {
-        setRunner(resp.node);
+      try {
+        const nodePDA = getNodePDA(publicKey, getEmailHash(resp.node.owner_email));
         
-        // Update Off-Chain Rewards / Points
-        setOffChainBalance(resp.node.offchain_accumulated_tokens);
+        // Use IdlAccounts to map the data to your NodeAccount type from the IDL
         
-        // Fetch On-Chain State directly from PDA
-        try {
-          const nodePDA = getNodePDA(publicKey, getEmailHash(resp.node.owner_email));
-          const accountData = await program.account.nodeAccount.fetch(nodePDA);
-          
-          const readableStaked = new BN(accountData.stakedAmount).toNumber() / TOKEN_DECIMALS;
-          const readableOnchainRewardBalance = new BN(accountData.rewardBalance).toNumber() / TOKEN_DECIMALS;
-          
-          console.log("On-chain reward balance (readable):", readableOnchainRewardBalance);
-          
-          setStakeBalance(readableStaked);
-          setOnChainRewardBalance(readableOnchainRewardBalance); // 🌟 Sets properties accurately for TypeScript layout satisfaction
-        } catch (e) {
-          console.warn("PDA fetch failed:", e);
-        }
+        const accountData = (await program.account.nodeAccount.fetch(nodePDA)) 
+        
+        const divisor = new BN(TOKEN_DECIMALS);
+        
+        // Now accountData.stakedAmount is recognized as a BN automatically
+        const readableStaked = accountData.stakedAmount.div(divisor).toNumber();
+        const readableOnchainRewardBalance = accountData.rewardBalance.div(divisor).toNumber();
+        
+        setStakeBalance(readableStaked);
+        setOnChainRewardBalance(readableOnchainRewardBalance);
+      } catch (e) {
+        console.warn("PDA fetch failed:", e);
       }
-      if (resp.view) setView(resp.view);
-    } catch (error) { 
-      setView('register'); 
     }
-  }, [publicKey, connection, program]);
-
+    if (resp.view) setView(resp.view);
+  } catch (error) { 
+    setView('register'); 
+  }
+}, [publicKey, connection, program]);
   useEffect(() => {
     if (!connected || !publicKey) { setView('no-wallet'); return; }
     setStaking(false);
@@ -110,18 +111,19 @@ export default function MinerNode() {
     setClaimSuccess(null);
 
     try {
-      const nodePDA = getNodePDA(publicKey, getEmailHash(runner.owner_email));
-      
-      // Re-fetch fresh account snapshot to secure precise raw token counts
-      const accountData = await program.account.nodeAccount.fetch(nodePDA);
-      const amountRaw = new BN(accountData.rewardBalance);
+const nodePDA = getNodePDA(publicKey, getEmailHash(runner.owner_email));
 
-      if (amountRaw.isZero()) {
-        setClaimAlert("No active on-chain rewards detected to finalize claim execution.");
-        setClaiming(false);
-        return;
-      }
+// Explicitly cast to our NodeAccount interface to satisfy TypeScript
+const accountData = (await program.account.nodeAccount.fetch(nodePDA)) as unknown as NodeAccount;
 
+// BN is safely accessed from your interface
+const amountRaw = new BN(accountData.rewardBalance);
+
+if (amountRaw.isZero()) {
+  setClaimAlert("No active on-chain rewards detected to finalize claim execution.");
+  setClaiming(false);
+  return;
+}
       // Execute on-chain smart contract settlement process
       const sig = await claimReward(program, nodePDA, amountRaw, walletContext,connection);
       await connection.confirmTransaction(sig, 'confirmed');

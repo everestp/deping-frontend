@@ -6,7 +6,7 @@ import { CTASection } from "../footer/CTASection";
 import { Footer } from "../footer/Footer";
 import { Hero } from "../hero/Hero";
 import { HowItWorks } from "../how-it-works/HowItWorks";
-import { Navbar } from "../navbar/Navbar";
+
 import { NetworkMap } from "../network-map/NetworkMap";
 import { Pricing } from "../pricing/Pricing";
 import { Security } from "../security/Security";

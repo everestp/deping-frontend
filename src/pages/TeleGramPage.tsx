@@ -106,8 +106,8 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
     async function loadStatus() {
       try {
         const response = await fetchTelegramUserStatus();
-        if (response.success && response.data && response.data.TelegramUsername?.Valid) {
-          const usernameStr = response.data.TelegramUsername.String;
+        if (response.success && response.data && response.data.telegram_username) {
+          const usernameStr = response.data.telegram_username;
           setTelegramUsername(usernameStr);
           setInputUsername(usernameStr || "");
         } else {
@@ -389,10 +389,10 @@ export default function TelegramPage({ monitors = [] }: { monitors?: Monitor[] }
               </div>
             </div>
 
-            {/* <div className="flex items-center justify-between text-xs font-mono text-[var(--text-muted)]">
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--text-muted)]">
               <span>Resets In:</span>
               <span className="text-sky-400 font-semibold">{hoursToReset}</span>
-            </div> */}
+            </div>
 
             <div className="pt-2">
               <button onClick={() => handleBuyCredits(activeTierObj)} disabled={buyingId !== null} className="w-full py-2.5 bg-white text-black rounded-xl font-mono text-xs font-bold transition-colors flex items-center justify-center gap-2">

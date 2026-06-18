@@ -310,35 +310,12 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonitorId, setSelectedMonitorId] = useState<string | null>(null);
 
-const [expandedId, setExpandedId] = useState<string | null>(null);
-const [isFetchingStats, setIsFetchingStats] = useState<string | null>(null);
-const [statsCache, setStatsCache] = useState<Record<string, ApiMonitorStats>>({});
+
+
+
   const selectedMonitor = monitors.find((m) => m.id === selectedMonitorId) ?? null;
 
 
-
-  const handleToggleExpand = async (monitorId: string) => {
-  // If closing, just clear
-  if (expandedId === monitorId) {
-    setExpandedId(null);
-    return;
-  }
-
-  setExpandedId(monitorId);
-
-  // Fetch only if not already in cache
-  if (!statsCache[monitorId]) {
-    setIsFetchingStats(monitorId);
-    try {
-      const stats = await fetchMonitorStats(monitorId);
-      setStatsCache((prev) => ({ ...prev, [monitorId]: stats }));
-    } catch (e) {
-      console.error("Failed to load stats:", e);
-    } finally {
-      setIsFetchingStats(null);
-    }
-  }
-};
 
   async function handleRefresh() {
     setRefreshing(true);

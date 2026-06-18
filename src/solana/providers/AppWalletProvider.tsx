@@ -13,7 +13,7 @@ interface AppWalletProviderProps {
 }
 
 const AppWalletProvider: React.FC<AppWalletProviderProps> = ({ children }) => {
-  const network = WalletAdapterNetwork.Devnet;
+  // const network = WalletAdapterNetwork.Devnet;
   const HELIUS_API_KEY = process.env.VITE_HELIUS_API_KEY || "70641d42-a106-426c-8064-818bdc324253";
 
   const endpoint = useMemo(() => {
