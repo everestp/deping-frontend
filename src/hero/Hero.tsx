@@ -59,7 +59,7 @@ export function Hero() {
               size="lg"
               variant="outline"
               className="h-12 px-6 text-base glass border-white/10 hover:bg-white/5"
-              onClick={()=> navigate("/singup")}
+              onClick={()=> navigate("/singnup")}
             >
               <Cpu className="w-4 h-4" />
               Become a node
