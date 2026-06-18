@@ -2,8 +2,8 @@
 // pages/MinerNode.tsx
 // ─────────────────────────────────────────────
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Cpu } from 'lucide-react';
+import  { useState, useEffect, useCallback } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
@@ -16,18 +16,17 @@ import { MinerDashboard } from '../components/miner/MinerDashBoard';
 
 import {
   getRunnerMe, registerRunner, activateNode,
-  validateStakePayment, validateUnstakePayment, sendHeartbeat,
+  validateStakePayment, validateUnstakePayment,
   validateDelete,
 } from '../api/node-api';
 
 import { useProgram } from '../solana/program/anchor-provider';
 import { 
-  getEmailHash, getNodePDA, initNode, stakeTokens, 
+  getEmailHash, getNodePDA, initNode, 
   withdrawStake, addStake, deleteAccount, claimReward // 🌟 Ensure claimReward is explicitly imported here
 } from '../solana/program/breezo.method';
-import { useInterval } from '../hooks/useInterval';
 
-import type { MinerView, RunnerNode, PendingTx, TerminalLine, RegisterPayload, ActiveNode } from '../types/miner';
+import type { MinerView, RunnerNode, PendingTx, TerminalLine, ActiveNode } from '../types/miner';
 
 const DEEPING_MINT = new PublicKey("DPg3P2U4syj8eGL6rRqMqhUfDayxVunh7Fmcowwh6hsj");
 const TOKEN_DECIMALS = 1_000_000_000;
@@ -44,6 +43,7 @@ export default function MinerNode() {
   const [stakeBalance, setStakeBalance] = useState(0);
   const [onChainRewardBalance, setOnChainRewardBalance] = useState(0);
   const [staking, setStaking] = useState(false);
+
   const [stakeError, setStakeError] = useState<string | null>(null);
   const [offChainBalance, setOffChainBalance] = useState(0);
   const [pendingTxs, setPendingTxs] = useState<PendingTx[]>([]);
@@ -92,6 +92,10 @@ export default function MinerNode() {
 
   useEffect(() => {
     if (!connected || !publicKey) { setView('no-wallet'); return; }
+    setStaking(false);
+  setStakeError(null);
+  setPendingTxs([]);
+  setTermLines([]);
     refreshBalances();
   }, [connected, publicKey, refreshBalances]);
 

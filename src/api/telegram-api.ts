@@ -58,6 +58,11 @@ export const addPurchasedCredits = (payload: AddCreditsPayload) =>
     method: "POST",
     body: JSON.stringify(payload),
   });
+  export const addMonitorPurchasedCredits = (payload: AddCreditsPayload) =>
+  apiFetch("/api/v1/monitor/credits/add", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 
 export const toggleMonitorNotification = (monitorId: string, enabled: boolean) =>
   apiFetch(`/api/v1/monitors/${monitorId}/notifications`, {
@@ -67,7 +72,7 @@ export const toggleMonitorNotification = (monitorId: string, enabled: boolean) =
 
 // ── Hooks ────────────────────────────────────────────────────────────────
 import { useState, useEffect, useCallback } from "react";
-import { TelegramUser } from "../types/telegram";
+
 
 export function useCreditStatus() {
   const [data, setData] = useState<TelegramCreditStatus | null>(null);

@@ -29,7 +29,7 @@ export function AppShell() {
           <div className="p-4 md:p-6 max-w-screen-xl mx-auto">
             <Outlet />
           </div>
-          <Footer />
+          {/* <Footer /> */}
         </main>
       </div>
     </div>

@@ -11,11 +11,13 @@ export interface UserInfo {
   id: number;
   email: string;
   wallet_pubkey: string;
+  monitor_credit_balance:string;
 }
 
 export interface AuthResponse {
   token: string;
   user: UserInfo;
+  
 }
 
 export interface RegisterPayload {

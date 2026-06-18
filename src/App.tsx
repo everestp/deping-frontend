@@ -15,6 +15,7 @@ import Help from './pages/Help';
 import TelegramPage from './pages/TeleGramPage';
 import Dashboard from './pages/Dashboard';
 import  { Toaster } from 'react-hot-toast';
+import UserDashboard from './pages/UserDashBoard';
 
 
 
@@ -59,6 +60,7 @@ function AppRoutes() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/monitor" element={<MonitorConfig />} />
+         <Route path="/monitor-credit" element={<UserDashboard />} />
         <Route path="/miner" element={<MinerNode />} />
         <Route path="/telegram" element={<TelegramPage />} />
         <Route path="/settings" element={<Settings />} />
