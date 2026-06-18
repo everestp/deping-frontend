@@ -29,7 +29,7 @@ export function CTASection() {
             transition={{
               duration: 4 + (i % 5),
               repeat: Infinity,
-              delay: i * 0.2,
+              delay: i * 0.3,
               ease: "easeInOut",
             }}
           />
