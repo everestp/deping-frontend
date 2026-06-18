@@ -578,7 +578,7 @@ useEffect(() => {
       <div
         key={currentBucketId} // Use bucketId as key for stability
         className={`flex-1 h-full rounded-[2px] ${colorClass} transition-all duration-300`}
-        title={!p ? `Missing: ${timeLabel}` : `Latency: ${p.LatencyMs}ms @ ${timeLabel}`}
+        title={!p ? `Missing: ${timeLabel}` : `Latency: ${p.TotalUs}ms @ ${timeLabel}`}
       />
     );
   })}
@@ -602,7 +602,8 @@ useEffect(() => {
                            {new Date(p.TimestampMs).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="py-2 text-sky-400">{p.GeoRegion}</td>
-                        <td className="py-2 text-right">{p.LatencyMs}ms</td>
+                   
+                        <td className="py-2 text-right">{p.TotalUs}ms</td>
                         <td className={`py-2 text-right ${p.Success ? 'text-emerald-400' : 'text-red-400'}`}>{p.Success ? 'OK' : 'ERR'}</td>
                       </tr>
                     ))}
