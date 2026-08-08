@@ -6,7 +6,7 @@ import { sha256 } from "js-sha256";
 // =====================================================
 // GLOBAL SETUP
 // =====================================================
-const PROGRAM_ID = new PublicKey("DVicVozhh4y38dA6iCzfPp2c4xj5Q29mJq6HgF5Eufiz");
+const PROGRAM_ID = new PublicKey("CxqFZ15ZaRSrJ3vf4gveBypzUCEp5q2Pa4BMEo2HFaUu");
 const DEEPING_MINT = new PublicKey("DPg3P2U4syj8eGL6rRqMqhUfDayxVunh7Fmcowwh6hsj");
 
 // =====================================================
@@ -75,8 +75,8 @@ export const buyProduct = async (
   // Derive Associated Token Accounts (ATAs)
   const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, user);
   const treasuryTokenAccount = await getAssociatedTokenAddress(
-    DEEPING_MINT, 
-    treasuryAuthority, 
+    DEEPING_MINT,
+    treasuryAuthority,
     true // Allow owner to be a PDA
   );
 
@@ -102,11 +102,11 @@ export const stakeTokens = async (
   const owner = parseWalletPubKey(wallet);
   const stakingVaultAuthority = getStakingVaultAuthority();
 
-  // Derive Associated Token Accounts (ATAs) 
+  // Derive Associated Token Accounts (ATAs)
   const userTokenAccount = await getAssociatedTokenAddress(DEEPING_MINT, owner);
   const stakingVault = await getAssociatedTokenAddress(DEEPING_MINT, stakingVaultAuthority, true);
 
-  // Anchor's .rpc() pattern natively manages latest blockhashes, token account 
+  // Anchor's .rpc() pattern natively manages latest blockhashes, token account
   // auto-creation constraints via the IDL, fee configuration, and standard client prompts.
   return await program.methods
     .stakeTokens(amount)
@@ -124,8 +124,8 @@ export const stakeTokens = async (
  * WITHDRAW STAKE — Recovers staked tokens from vault after cooldown cycles finish
  */
 export const withdrawStake = async (
-  program: Program<any>, 
-  nodeAccount: PublicKey, 
+  program: Program<any>,
+  nodeAccount: PublicKey,
   amount: BN, // 1. Add amount here!
   wallet: any
 ) => {
