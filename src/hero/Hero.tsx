@@ -28,17 +28,7 @@ export function Hero() {
         className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-8"
       >
         <div>
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 16 },
-              show: { opacity: 1, y: 0 },
-            }}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-muted-foreground"
-          >
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-            DePIN-powered uptime monitoring · Now on Solana mainnet
-          </motion.div>
-
+         
           <motion.h1
             variants={{
               hidden: { opacity: 0, y: 16 },
