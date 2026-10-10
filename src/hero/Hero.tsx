@@ -14,18 +14,7 @@ export function Hero() {
     <section className="relative pt-36 pb-20 sm:pt-44 sm:pb-28 px-4 sm:px-6 overflow-hidden">
       <HeroBackground />
       <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={{
-            hidden: {},
-            show: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
-          }}
-        >
-          <motion.div
-            variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
-            className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 text-xs text-muted-foreground"
-          >
+    
             <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
             DePIN-powered uptime monitoring · Now on Solana mainnet
           </motion.div>
@@ -70,7 +59,7 @@ export function Hero() {
             className="mt-10 flex items-center gap-6 text-xs text-muted-foreground"
           >
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-accent" />
+              <div className="w-2 h-2 rounded-full bg-accent" /
               2,431 nodes live
             </div>
             <div className="hidden sm:block">87 countries</div>
