@@ -58,12 +58,8 @@ export function Hero() {
             variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }}
             className="mt-10 flex items-center gap-6 text-xs text-muted-foreground"
           >
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-accent" /
-              2,431 nodes live
-            </div>
-            <div className="hidden sm:block">87 countries</div>
-            <div className="hidden sm:block">12.4M checks / day</div>
+          
+        
           </motion.div>
         </motion.div>
 
